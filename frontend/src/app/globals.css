@@ -976,6 +976,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  flex-wrap: wrap;
   background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
 }
 
@@ -1472,13 +1473,19 @@ textarea.input:focus {
 /* ——— Table ——— */
 .list-toolbar {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .list-search {
-  width: min(220px, 100%);
+  width: 200px;
   max-width: 100%;
+  flex: 0 1 200px;
+  min-width: 140px;
   height: 36px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -1670,6 +1677,7 @@ textarea.input:focus {
 
 .toolbar-btn {
   height: 36px;
+  min-height: 36px;
   padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -1677,9 +1685,14 @@ textarea.input:focus {
   color: var(--text-soft);
   font-weight: 600;
   font-size: 13px;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  flex-shrink: 0;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
@@ -5019,7 +5032,7 @@ table.dash-mini-table tbody tr.dash-click-row:focus-visible,
 }
 
 .user-card:hover {
-  border-color: #fd7171;
+  border-color: #c7d7ee;
   box-shadow: 0 8px 22px rgba(30, 41, 59, 0.06);
 }
 
@@ -6533,6 +6546,22 @@ textarea,
 @media (max-width: 640px) {
   .topbar {
     padding: 0 10px;
+  }
+
+  .list-toolbar {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .list-toolbar .list-search {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+
+  .list-toolbar .toolbar-btn {
+    flex: 1 1 calc(50% - 8px);
+    min-width: calc(50% - 8px);
   }
 
   .content {

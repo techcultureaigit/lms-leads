@@ -45,8 +45,23 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
   const refreshLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api<{ items: Lead[] }>("/api/leads?limit=100&sort=-createdAt");
-      setLeads(res.items);
+      const all: Lead[] = [];
+      let page = 1;
+      let pages = 1;
+
+      do {
+        const res = await api<{
+          items: Lead[];
+          total: number;
+          page: number;
+          pages: number;
+        }>(`/api/leads?limit=100&page=${page}&sort=-createdAt`);
+        all.push(...(res.items || []));
+        pages = Math.max(1, Number(res.pages) || 1);
+        page += 1;
+      } while (page <= pages);
+
+      setLeads(all);
     } finally {
       setLoading(false);
     }
