@@ -8,8 +8,8 @@ import { ApiError } from "@/lib/api";
 export default function LoginPageClient() {
   const { login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("admin@techculture.com");
-  const [password, setPassword] = useState("Admin@123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -79,10 +79,6 @@ export default function LoginPageClient() {
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
-
-          <p className="login-demo">
-            Demo: <code>admin@techculture.com</code> / <code>Admin@123</code>
-          </p>
         </form>
       </div>
     </div>

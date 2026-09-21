@@ -313,19 +313,44 @@ button {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
   border: 0;
   background: transparent;
   color: #dc2626;
+  font-family: inherit;
   font-weight: 600;
   font-size: 14px;
+  line-height: 1.2;
   padding: 11px 14px;
   border-radius: 10px;
   position: relative;
+  text-align: left;
+}
+
+.logout-btn .menu-icon {
+  flex: 0 0 20px;
+  color: inherit;
+}
+
+.logout-btn .menu-label {
+  flex: 0 1 auto;
+  width: auto;
+  text-align: left;
+  white-space: nowrap;
+  color: inherit;
+}
+
+.logout-btn .menu-tip {
+  display: none;
 }
 
 .logout-btn:hover {
   background: #fef2f2;
+}
+
+.app-shell.sidebar-collapsed .logout-btn .menu-tip {
+  display: block;
 }
 
 .menu a {

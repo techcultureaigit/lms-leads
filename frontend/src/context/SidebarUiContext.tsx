@@ -4,12 +4,20 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
 } from "react";
 
 const SIDEBAR_KEY = "tc_sidebar_collapsed";
+
+function readCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 type SidebarUiContextValue = {
   collapsed: boolean;
@@ -19,15 +27,8 @@ type SidebarUiContextValue = {
 const SidebarUiContext = createContext<SidebarUiContextValue | null>(null);
 
 export function SidebarUiProvider({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // Read localStorage on first client render so navigation doesn't flash open.
+  const [collapsed, setCollapsed] = useState(readCollapsed);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
