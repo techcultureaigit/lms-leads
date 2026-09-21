@@ -1,0 +1,79 @@
+name: LMS Leads
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      admin: ${{ steps.changes.outputs.admin }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          base: main
+          filters: |
+            backend:
+              - 'backend/**'
+            admin:
+              - 'frontend/**'
+
+  backend:
+    needs: detect
+    if: needs.detect.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Backend
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /var/www/techculture/lms-leads
+
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+
+            cd backend
+            npm install
+
+            pm2 reload lms-leads-api-8003 || pm2 start npm --name "lms-leads-api-8003" -- start
+
+  admin:
+    needs: detect
+    if: needs.detect.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Admin
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /var/www/techculture/lms-leads
+
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+
+            cd frontend
+            npm install
+            npm run build -- --webpack
+
+            pm2 reload lms-leads-admin-3005 || pm2 start npm --name "lms-leads-admin-3005" -- start
