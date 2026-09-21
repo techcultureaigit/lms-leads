@@ -10,6 +10,8 @@ async function start() {
     console.log(`API running on http://localhost:${PORT}`);
   });
 }
+ 
+console.log("hi");
 
 start().catch((err) => {
   console.error("Failed to start server:", err);
