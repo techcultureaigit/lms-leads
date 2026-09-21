@@ -123,12 +123,26 @@ const GROUPS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { logout, user } = useAuth();
-  const { collapsed } = useSidebarUi();
+  const { collapsed, setCollapsed } = useSidebarUi();
+
+  const closeMobileNav = () => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 900px)").matches
+    ) {
+      setCollapsed(true);
+    }
+  };
 
   return (
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`}>
       <div className="brand">
-        <Link href="/dashboard" className="brand-logo-link" aria-label="TechCulture home">
+        <Link
+          href="/dashboard"
+          className="brand-logo-link"
+          aria-label="TechCulture home"
+          onClick={closeMobileNav}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={collapsed ? "/logo-mark.png" : "/logo.png"}
@@ -152,6 +166,7 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   className={active ? "active" : undefined}
+                  onClick={closeMobileNav}
                 >
                   <span className="menu-icon">
                     <Icon name={item.icon} />
