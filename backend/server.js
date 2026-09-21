@@ -11,8 +11,6 @@ async function start() {
   });
 }
  
-console.log("hi");
-
 start().catch((err) => {
   console.error("Failed to start server:", err);
   process.exit(1);
