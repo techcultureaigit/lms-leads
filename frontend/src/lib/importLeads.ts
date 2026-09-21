@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { LeadFormData, LeadStatus, MeetingType } from "@/types/lead";
 import { LEAD_STATUSES } from "@/lib/constants";
 
@@ -222,12 +222,14 @@ function parseMeetingType(raw: string): MeetingType {
 
 function excelDateToIso(v: unknown): string {
   if (v == null || v === "") return "";
+  if (v instanceof Date && !Number.isNaN(v.getTime())) {
+    return v.toISOString().slice(0, 10);
+  }
   if (typeof v === "number" && Number.isFinite(v)) {
-    const parsed = XLSX.SSF?.parse_date_code?.(v);
-    if (parsed) {
-      const mm = String(parsed.m).padStart(2, "0");
-      const dd = String(parsed.d).padStart(2, "0");
-      return `${parsed.y}-${mm}-${dd}`;
+    // Excel serial date (days since 1899-12-30)
+    if (v > 20000 && v < 80000) {
+      const utc = Date.UTC(1899, 11, 30) + Math.round(v) * 86400000;
+      return new Date(utc).toISOString().slice(0, 10);
     }
   }
   const s = cellStr(v);
@@ -239,12 +241,106 @@ function excelDateToIso(v: unknown): string {
   return s;
 }
 
+function unwrapCell(value: unknown): unknown {
+  if (value == null) return "";
+  if (value instanceof Date) return value;
+  if (typeof value !== "object") return value;
+  const o = value as Record<string, unknown>;
+  if ("result" in o) return unwrapCell(o.result);
+  if ("text" in o && typeof o.text === "string") return o.text;
+  if (Array.isArray(o.richText)) {
+    return (o.richText as { text?: string }[])
+      .map((t) => t.text || "")
+      .join("");
+  }
+  if ("hyperlink" in o && typeof o.text === "string") return o.text;
+  return String(value);
+}
+
+function sheetToMatrix(sheet: ExcelJS.Worksheet): unknown[][] {
+  const rows: unknown[][] = [];
+  const colCount = Math.max(sheet.columnCount || 0, 1);
+  sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const line: unknown[] = [];
+    for (let c = 1; c <= Math.max(colCount, row.cellCount || 0); c += 1) {
+      line.push(unwrapCell(row.getCell(c).value));
+    }
+    // ExcelJS rowNumber is 1-based; keep dense array by index
+    rows[rowNumber - 1] = line;
+  });
+  // Fill gaps if any
+  for (let i = 0; i < rows.length; i += 1) {
+    if (!rows[i]) rows[i] = [];
+  }
+  return rows;
+}
+
+function parseCsvText(text: string): unknown[][] {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+  const rows: unknown[][] = [];
+  for (const line of lines) {
+    if (!line.trim()) {
+      rows.push([]);
+      continue;
+    }
+    const cells: string[] = [];
+    let cur = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (ch === "," && !inQuotes) {
+        cells.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
+      }
+    }
+    cells.push(cur);
+    rows.push(cells);
+  }
+  return rows;
+}
+
+async function loadRawRows(
+  file: ArrayBuffer,
+  fileName = "",
+): Promise<unknown[][]> {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".csv")) {
+    return parseCsvText(new TextDecoder("utf-8").decode(file));
+  }
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(file);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) throw new Error("No sheet found in file");
+    return sheetToMatrix(sheet);
+  } catch (xlsxErr) {
+    // Fallback: some exports are CSV with .xls name, or plain text
+    try {
+      return parseCsvText(new TextDecoder("utf-8").decode(file));
+    } catch {
+      throw xlsxErr instanceof Error
+        ? xlsxErr
+        : new Error("Failed to read Excel/CSV file");
+    }
+  }
+}
+
 function countMatches(headers: string[]): number {
   return headers.reduce((n, h) => (h && pickField(h) ? n + 1 : n), 0);
 }
 
 /** Find best header row in first few rows (skips title banners) */
-function findHeaderRowIndex(raw: (string | number | Date | null)[][]): number {
+function findHeaderRowIndex(raw: unknown[][]): number {
   let bestIdx = 0;
   let bestScore = -1;
   const limit = Math.min(8, raw.length);
@@ -261,26 +357,16 @@ function findHeaderRowIndex(raw: (string | number | Date | null)[][]): number {
   return bestIdx;
 }
 
-export function parseLeadImportFile(file: ArrayBuffer): {
+export async function parseLeadImportFile(
+  file: ArrayBuffer,
+  fileName = "",
+): Promise<{
   headers: string[];
   rows: ImportLeadRow[];
   mapped: Partial<Record<FieldKey, string>>;
   headerRow: number;
-} {
-  const wb = XLSX.read(file, { type: "array", cellDates: true });
-  const sheetName = wb.SheetNames[0];
-  if (!sheetName) {
-    throw new Error("No sheet found in file");
-  }
-  const sheet = wb.Sheets[sheetName];
-  const raw = XLSX.utils.sheet_to_json<(string | number | Date | null)[]>(
-    sheet,
-    {
-      header: 1,
-      defval: "",
-      raw: true,
-    },
-  );
+}> {
+  const raw = await loadRawRows(file, fileName);
 
   if (!raw.length) {
     throw new Error("File is empty");

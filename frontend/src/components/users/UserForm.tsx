@@ -30,8 +30,8 @@ function permissionKeysToOptions(keys: Permission[]) {
 }
 
 function optionsToPermissionKeys(options: string[]): Permission[] {
-  const map = new Map(
-    ALL_PERMISSIONS.map((p) => [`${p.group} · ${p.label}`, p.key] as const),
+  const map = new Map<string, Permission>(
+    ALL_PERMISSIONS.map((p) => [`${p.group} · ${p.label}`, p.key]),
   );
   return options
     .map((o) => map.get(o))

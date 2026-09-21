@@ -58,7 +58,7 @@ export default function ImportLeads() {
     setFileName(file.name);
     try {
       const buf = await file.arrayBuffer();
-      const parsed = parseLeadImportFile(buf);
+      const parsed = await parseLeadImportFile(buf, file.name);
       if (!parsed.rows.length) {
         setError("No data rows found in file.");
         return;
