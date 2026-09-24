@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
-import type { LeadFormData, LeadStatus, MeetingType } from "@/types/lead";
-import { LEAD_STATUSES } from "@/lib/constants";
+import type { LeadFormData, LeadSource, LeadStatus, MeetingType } from "@/types/lead";
+import { LEAD_SOURCES, LEAD_STATUSES } from "@/lib/constants";
 
 export type ImportLeadRow = LeadFormData & { _row?: number };
 
@@ -84,6 +84,13 @@ const FIELD_ALIASES: Record<FieldKey, string[]> = {
   website: ["website", "web site", "website url", "web url", "url"],
   products: ["products interested", "products", "product", "interest"],
   status: ["lead status", "status"],
+  leadSource: [
+    "lead source",
+    "source",
+    "leadsource",
+    "utm source",
+    "campaign source",
+  ],
   owner: ["lead owner", "owned by", "owner"],
   assigned: ["assigned user", "assigned to", "assignee", "assigned"],
   followup: [
@@ -112,6 +119,7 @@ const FIELD_PRIORITY: FieldKey[] = [
   "website",
   "products",
   "status",
+  "leadSource",
   "owner",
   "assigned",
   "followup",
@@ -211,6 +219,14 @@ function parseStatus(raw: string): LeadStatus {
   const s = raw.trim();
   const hit = LEAD_STATUSES.find((x) => x.toLowerCase() === s.toLowerCase());
   return hit || "New";
+}
+
+function parseLeadSource(raw: string): LeadSource | string {
+  const s = raw.trim();
+  if (!s) return "";
+  const hit = LEAD_SOURCES.find((x) => x.toLowerCase() === s.toLowerCase());
+  // Keep known defaults normalized; allow custom imported values as-is.
+  return hit || s;
 }
 
 function parseMeetingType(raw: string): MeetingType {
@@ -513,6 +529,7 @@ export async function parseLeadImportFile(
       website,
       products: parseProducts(get("products")),
       status,
+      leadSource: parseLeadSource(get("leadSource")),
       owner: get("owner"),
       assigned: get("assigned"),
       followup: getDate("followup"),
@@ -544,6 +561,7 @@ export function downloadSampleCsv() {
     "Website",
     "Products",
     "Lead Status",
+    "Lead Source",
     "Lead Owner",
     "Assigned User",
     "Follow-up Date",
@@ -558,6 +576,7 @@ export function downloadSampleCsv() {
     "https://abc.com",
     "CRM, Website",
     "New",
+    "Google",
     "Vivek Thakur",
     "Vivek Thakur",
     "2026-09-25",

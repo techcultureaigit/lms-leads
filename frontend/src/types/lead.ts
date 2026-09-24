@@ -5,6 +5,8 @@ export type LeadStatus =
   | "Lost"
   | "Completed";
 
+export type LeadSource = "Self" | "Google" | "Facebook" | "Campaign" | "";
+
 export type MeetingType = "Online" | "Offline" | "";
 
 export interface Lead {
@@ -17,6 +19,7 @@ export interface Lead {
   website?: string;
   products: string[];
   status: LeadStatus;
+  leadSource?: LeadSource | string;
   owner: string;
   assigned: string;
   followup: string;
@@ -42,6 +45,7 @@ export type LeadFormData = {
   mobile: string;
   notes: string;
   email: string;
+  leadSource: LeadSource | string;
   meetingDate: string;
   meetingType: MeetingType;
   meetingLink: string;

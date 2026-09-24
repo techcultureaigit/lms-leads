@@ -172,6 +172,7 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
       website: current.website || "",
       products: current.products,
       status: current.status,
+      leadSource: current.leadSource || "",
       owner: current.owner,
       assigned: current.assigned,
       followup: current.followup,

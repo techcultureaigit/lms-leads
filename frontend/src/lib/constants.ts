@@ -1,4 +1,4 @@
-import type { LeadStatus } from "@/types/lead";
+import type { LeadSource, LeadStatus } from "@/types/lead";
 
 export const USERS = [
   "Amit Sharma",
@@ -28,6 +28,13 @@ export const LEAD_STATUSES: LeadStatus[] = [
   "Meeting",
   "Lost",
   "Completed",
+];
+
+export const LEAD_SOURCES: Exclude<LeadSource, "">[] = [
+  "Self",
+  "Google",
+  "Facebook",
+  "Campaign",
 ];
 
 export const TEAM_USERS = [

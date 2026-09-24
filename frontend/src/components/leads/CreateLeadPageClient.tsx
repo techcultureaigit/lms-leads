@@ -7,6 +7,7 @@ import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import LeadForm from "@/components/leads/LeadForm";
 import PageHeader from "@/components/shared/PageHeader";
+import { useAuth } from "@/context/AuthContext";
 import { useLeads } from "@/context/LeadsContext";
 import { ApiError } from "@/lib/api";
 import { emptyForm } from "@/lib/format";
@@ -14,6 +15,7 @@ import type { LeadFormData } from "@/types/lead";
 
 export default function CreateLeadPageClient() {
   const router = useRouter();
+  const { user } = useAuth();
   const { createLead } = useLeads();
   const [form, setForm] = useState<LeadFormData>(emptyForm());
   const [error, setError] = useState("");
@@ -23,7 +25,10 @@ export default function CreateLeadPageClient() {
     setSaving(true);
     setError("");
     try {
-      await createLead(form);
+      await createLead({
+        ...form,
+        owner: form.owner.trim() || user?.name || "",
+      });
       router.push("/leads");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Failed to create lead");

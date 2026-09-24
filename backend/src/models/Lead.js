@@ -15,6 +15,11 @@ const leadSchema = new mongoose.Schema(
       enum: LEAD_STATUSES,
       default: "New",
     },
+    leadSource: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     owner: { type: String, required: true, trim: true },
     assigned: { type: String, required: true, trim: true },
     followup: { type: String, default: "" },
@@ -38,6 +43,7 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ entity: "text", contact: "text", email: "text", mobile: "text" });
 leadSchema.index({ status: 1 });
 leadSchema.index({ owner: 1 });
+leadSchema.index({ leadSource: 1 });
 leadSchema.index({ followup: 1 });
 
 export const Lead = mongoose.model("Lead", leadSchema);

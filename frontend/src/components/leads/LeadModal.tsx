@@ -80,6 +80,10 @@ export default function LeadModal({ lead, onClose }: LeadModalProps) {
                 <p>{lead.status}</p>
               </div>
               <div>
+                <b>Lead Source</b>
+                <p>{lead.leadSource || "—"}</p>
+              </div>
+              <div>
                 <b>Follow-up Date</b>
                 <p>{formatDate(lead.followup)}</p>
               </div>

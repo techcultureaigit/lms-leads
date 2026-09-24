@@ -5,6 +5,9 @@ import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
+import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
+import { ApiError } from "@/lib/api";
 
 const SECTIONS = [
   {
@@ -73,18 +76,74 @@ function SectionIcon({ name }: { name: string }) {
 }
 
 export default function SettingsPageClient() {
+  const { user } = useAuth();
+  const {
+    leadSources,
+    loading: sourcesLoading,
+    addLeadSource,
+    removeLeadSource,
+  } = useSettings();
+  const canManageSettings =
+    user?.role === "Admin" ||
+    Boolean(user?.permissions?.includes("settings.manage"));
+
   const [section, setSection] = useState<SectionId>("Profile");
   const [saved, setSaved] = useState(false);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [followReminders, setFollowReminders] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
   const [meetingAlerts, setMeetingAlerts] = useState(true);
+  const [newSource, setNewSource] = useState("");
+  const [sourceBusy, setSourceBusy] = useState(false);
+  const [sourceError, setSourceError] = useState("");
+  const [sourceOk, setSourceOk] = useState("");
 
   const active = SECTIONS.find((s) => s.id === section)!;
 
   const handleSave = () => {
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
+  };
+
+  const handleAddSource = async () => {
+    const name = newSource.trim();
+    if (!name) {
+      setSourceError("Enter a source name");
+      return;
+    }
+    setSourceBusy(true);
+    setSourceError("");
+    setSourceOk("");
+    try {
+      await addLeadSource(name);
+      setNewSource("");
+      setSourceOk(`“${name}” added`);
+      window.setTimeout(() => setSourceOk(""), 2000);
+    } catch (e) {
+      setSourceError(
+        e instanceof ApiError ? e.message : "Failed to add lead source",
+      );
+    } finally {
+      setSourceBusy(false);
+    }
+  };
+
+  const handleRemoveSource = async (name: string) => {
+    if (!window.confirm(`Remove lead source “${name}”?`)) return;
+    setSourceBusy(true);
+    setSourceError("");
+    setSourceOk("");
+    try {
+      await removeLeadSource(name);
+      setSourceOk(`“${name}” removed`);
+      window.setTimeout(() => setSourceOk(""), 2000);
+    } catch (e) {
+      setSourceError(
+        e instanceof ApiError ? e.message : "Failed to remove lead source",
+      );
+    } finally {
+      setSourceBusy(false);
+    }
   };
 
   return (
@@ -119,10 +178,12 @@ export default function SettingsPageClient() {
         <div className="settings-layout">
           <aside className="settings-nav">
             <div className="settings-nav-head">
-              <div className="settings-nav-avatar">AS</div>
+              <div className="settings-nav-avatar">
+                {user?.initials || "—"}
+              </div>
               <div>
-                <strong>Amit Sharma</strong>
-                <span>Sales Lead</span>
+                <strong>{user?.name || "User"}</strong>
+                <span>{user?.role || ""}</span>
               </div>
             </div>
 
@@ -150,22 +211,29 @@ export default function SettingsPageClient() {
                 <h2>{active.id}</h2>
                 <p>{active.hint}</p>
               </div>
-              <button
-                type="button"
-                className="btn btn-primary dash-cta"
-                onClick={handleSave}
-              >
-                {saved ? "Saved" : "Save"}
-              </button>
+              {section !== "Workspace" ? (
+                <button
+                  type="button"
+                  className="btn btn-primary dash-cta"
+                  onClick={handleSave}
+                >
+                  {saved ? "Saved" : "Save"}
+                </button>
+              ) : null}
             </div>
 
             {section === "Profile" ? (
               <div className="settings-body">
                 <div className="settings-profile-banner">
-                  <div className="settings-nav-avatar lg">AS</div>
+                  <div className="settings-nav-avatar lg">
+                    {user?.initials || "—"}
+                  </div>
                   <div>
-                    <h3>Amit Sharma</h3>
-                    <p>amit@techculture.in · +91 9876500001</p>
+                    <h3>{user?.name || "User"}</h3>
+                    <p>
+                      {user?.email || "—"}
+                      {user?.phone ? ` · +91 ${user.phone}` : ""}
+                    </p>
                   </div>
                   <button type="button" className="btn btn-secondary dash-cta">
                     Change Photo
@@ -175,23 +243,19 @@ export default function SettingsPageClient() {
                 <div className="settings-form">
                   <div className="field">
                     <label>Full Name</label>
-                    <input className="input" defaultValue="Amit Sharma" />
-                  </div>
-                  <div className="field">
-                    <label>Role</label>
-                    <input className="input" defaultValue="Sales Lead" />
+                    <input
+                      className="input"
+                      defaultValue={user?.name || ""}
+                      readOnly
+                    />
                   </div>
                   <div className="field">
                     <label>Email</label>
-                    <input className="input" defaultValue="amit@techculture.in" />
-                  </div>
-                  <div className="field">
-                    <label>Mobile</label>
-                    <input className="input" defaultValue="9876500001" />
-                  </div>
-                  <div className="field full">
-                    <label>Bio</label>
-                    <textarea defaultValue="Leading TechCulture enterprise and SMB lead desk." />
+                    <input
+                      className="input"
+                      defaultValue={user?.email || ""}
+                      readOnly
+                    />
                   </div>
                 </div>
               </div>
@@ -200,10 +264,10 @@ export default function SettingsPageClient() {
             {section === "Notifications" ? (
               <div className="settings-body">
                 <div className="settings-toggle-list">
-                  <div className="toggle-row">
+                  <div className="settings-toggle-row">
                     <div>
-                      <h4>Email alerts</h4>
-                      <p>Get notified when a lead is assigned to you</p>
+                      <strong>Email alerts</strong>
+                      <p>Get notified about important lead updates</p>
                     </div>
                     <button
                       type="button"
@@ -214,10 +278,10 @@ export default function SettingsPageClient() {
                       <i />
                     </button>
                   </div>
-                  <div className="toggle-row">
+                  <div className="settings-toggle-row">
                     <div>
-                      <h4>Follow-up reminders</h4>
-                      <p>Morning digest of due and overdue tasks</p>
+                      <strong>Follow-up reminders</strong>
+                      <p>Reminders for due and overdue follow-ups</p>
                     </div>
                     <button
                       type="button"
@@ -228,10 +292,10 @@ export default function SettingsPageClient() {
                       <i />
                     </button>
                   </div>
-                  <div className="toggle-row">
+                  <div className="settings-toggle-row">
                     <div>
-                      <h4>Meeting alerts</h4>
-                      <p>Reminders before scheduled online/offline meetings</p>
+                      <strong>Meeting alerts</strong>
+                      <p>Alerts when meetings are scheduled for today</p>
                     </div>
                     <button
                       type="button"
@@ -242,10 +306,10 @@ export default function SettingsPageClient() {
                       <i />
                     </button>
                   </div>
-                  <div className="toggle-row">
+                  <div className="settings-toggle-row">
                     <div>
-                      <h4>Weekly performance digest</h4>
-                      <p>Summary of wins, losses and pipeline changes</p>
+                      <strong>Weekly digest</strong>
+                      <p>Summary of pipeline activity each week</p>
                     </div>
                     <button
                       type="button"
@@ -262,7 +326,83 @@ export default function SettingsPageClient() {
 
             {section === "Workspace" ? (
               <div className="settings-body">
-                <div className="settings-form">
+                <div className="settings-source-block">
+                  <div className="settings-source-head">
+                    <div>
+                      <h3>Lead Sources</h3>
+                      <p>
+                        These options appear in Create Lead → Lead Source
+                        dropdown. Add new sources anytime.
+                      </p>
+                    </div>
+                  </div>
+
+                  {sourceError ? (
+                    <div className="cal-flash err">{sourceError}</div>
+                  ) : null}
+                  {sourceOk ? (
+                    <div className="cal-flash ok">{sourceOk}</div>
+                  ) : null}
+
+                  {canManageSettings ? (
+                    <div className="settings-source-add">
+                      <input
+                        className="input"
+                        value={newSource}
+                        onChange={(e) => setNewSource(e.target.value)}
+                        placeholder="e.g. Instagram, Referral, LinkedIn"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddSource();
+                          }
+                        }}
+                        disabled={sourceBusy}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary dash-cta"
+                        onClick={handleAddSource}
+                        disabled={sourceBusy}
+                      >
+                        {sourceBusy ? "Saving…" : "Add Source"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="hint">
+                      You can view lead sources. Ask an admin to add or remove
+                      options.
+                    </p>
+                  )}
+
+                  <ul className="settings-source-list">
+                    {sourcesLoading && !leadSources.length ? (
+                      <li className="muted">Loading sources…</li>
+                    ) : null}
+                    {leadSources.map((source) => (
+                      <li key={source}>
+                        <span>{source}</span>
+                        {canManageSettings ? (
+                          <button
+                            type="button"
+                            className="settings-source-remove"
+                            onClick={() => handleRemoveSource(source)}
+                            disabled={sourceBusy || leadSources.length <= 1}
+                            title={
+                              leadSources.length <= 1
+                                ? "Keep at least one source"
+                                : `Remove ${source}`
+                            }
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="settings-form" style={{ marginTop: 22 }}>
                   <div className="field">
                     <label>Company Name</label>
                     <input className="input" defaultValue="TechCulture" />
@@ -287,20 +427,6 @@ export default function SettingsPageClient() {
                       <option>EUR</option>
                     </select>
                   </div>
-                  <div className="field">
-                    <label>Fiscal Year Start</label>
-                    <select defaultValue="April">
-                      <option>April</option>
-                      <option>January</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Default Lead Status</label>
-                    <select defaultValue="New">
-                      <option>New</option>
-                      <option>In Process</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             ) : null}
@@ -314,15 +440,27 @@ export default function SettingsPageClient() {
                 <div className="settings-form">
                   <div className="field">
                     <label>Current Password</label>
-                    <input className="input" type="password" placeholder="••••••••" />
+                    <input
+                      className="input"
+                      type="password"
+                      placeholder="••••••••"
+                    />
                   </div>
                   <div className="field">
                     <label>New Password</label>
-                    <input className="input" type="password" placeholder="••••••••" />
+                    <input
+                      className="input"
+                      type="password"
+                      placeholder="••••••••"
+                    />
                   </div>
                   <div className="field full">
                     <label>Confirm New Password</label>
-                    <input className="input" type="password" placeholder="••••••••" />
+                    <input
+                      className="input"
+                      type="password"
+                      placeholder="••••••••"
+                    />
                   </div>
                 </div>
               </div>

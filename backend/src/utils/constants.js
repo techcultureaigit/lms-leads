@@ -70,6 +70,8 @@ export const LEAD_STATUSES = [
   "Completed",
 ];
 
+export const LEAD_SOURCES = ["Self", "Google", "Facebook", "Campaign"];
+
 export const PRODUCTS = [
   "Mobile App",
   "Mutual Fund",

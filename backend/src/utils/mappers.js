@@ -30,6 +30,7 @@ export function toLeadDto(doc) {
     website: o.website || "",
     products: o.products || [],
     status: o.status,
+    leadSource: o.leadSource || "",
     owner: o.owner,
     assigned: o.assigned,
     followup: o.followup || "",

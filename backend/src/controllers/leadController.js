@@ -33,6 +33,7 @@ export const listLeads = asyncHandler(async (req, res) => {
   if (status) filter.status = status;
   if (owner) filter.owner = owner;
   if (product) filter.products = product;
+  if (req.query.leadSource) filter.leadSource = req.query.leadSource;
   if (followupFrom || followupTo) {
     filter.followup = {};
     if (followupFrom) filter.followup.$gte = followupFrom;
@@ -83,6 +84,9 @@ export const createLead = asyncHandler(async (req, res) => {
       message: "entity, contact, mobile, owner, assigned are required",
     });
   }
+  if (!body.leadSource) {
+    return res.status(400).json({ message: "Lead source is required" });
+  }
   if (!Array.isArray(body.products) || !body.products.length) {
     return res.status(400).json({ message: "Select at least one product" });
   }
@@ -111,6 +115,7 @@ export const createLead = asyncHandler(async (req, res) => {
     website: body.website || "",
     products: body.products,
     status: body.status || "New",
+    leadSource: body.leadSource || "",
     owner: body.owner,
     assigned: body.assigned,
     followup: body.followup || "",
@@ -183,6 +188,7 @@ export const updateLead = asyncHandler(async (req, res) => {
     website: body.website ?? leadDoc.website,
     products: body.products ?? leadDoc.products,
     status: nextStatus,
+    leadSource: body.leadSource ?? leadDoc.leadSource,
     owner: body.owner ?? leadDoc.owner,
     assigned: body.assigned ?? leadDoc.assigned,
     followup: body.followup ?? leadDoc.followup,
@@ -405,6 +411,7 @@ export const importLeads = asyncHandler(async (req, res) => {
         website: String(row.website || "").trim(),
         products: products.length ? products : ["CRM"],
         status,
+        leadSource: String(row.leadSource || "").trim(),
         owner: String(row.owner || defaultOwner).trim(),
         assigned: String(row.assigned || row.owner || defaultOwner).trim(),
         followup: String(row.followup || "").trim(),

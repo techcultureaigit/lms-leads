@@ -7,24 +7,35 @@ import type {
 } from "@/types/filter";
 import type { Lead } from "@/types/lead";
 
-export const FILTER_FIELDS: FilterFieldDef[] = [
-  { key: "entity", label: "Entity Name", type: "text" },
-  { key: "contact", label: "Contact Person", type: "text" },
-  { key: "mobile", label: "Mobile No", type: "text" },
-  { key: "email", label: "Email Id", type: "text" },
-  { key: "location", label: "Location", type: "text" },
-  { key: "website", label: "Website", type: "text" },
-  { key: "status", label: "Lead Status", type: "select", options: [...LEAD_STATUSES] },
-  { key: "owner", label: "Lead Owner", type: "text" },
-  { key: "assigned", label: "Assigned User", type: "text" },
-  { key: "products", label: "Products", type: "select", options: [...PRODUCTS] },
-  { key: "followup", label: "Follow-up Date", type: "date" },
-  { key: "meetingDate", label: "Meeting Date", type: "date" },
-  { key: "meetingType", label: "Meeting Type", type: "select", options: ["Online", "Offline"] },
-  { key: "notes", label: "Notes", type: "text" },
-  { key: "lostDate", label: "Lost Date", type: "date" },
-  { key: "wonDate", label: "Won Date", type: "date" },
-];
+export function getFilterFields(leadSources: string[] = []): FilterFieldDef[] {
+  return [
+    { key: "entity", label: "Entity Name", type: "text" },
+    { key: "contact", label: "Contact Person", type: "text" },
+    { key: "mobile", label: "Mobile No", type: "text" },
+    { key: "email", label: "Email Id", type: "text" },
+    { key: "location", label: "Location", type: "text" },
+    { key: "website", label: "Website", type: "text" },
+    { key: "status", label: "Lead Status", type: "select", options: [...LEAD_STATUSES] },
+    {
+      key: "leadSource",
+      label: "Lead Source",
+      type: "select",
+      options: leadSources.length ? leadSources : ["Self", "Google", "Facebook", "Campaign"],
+    },
+    { key: "owner", label: "Lead Owner", type: "text" },
+    { key: "assigned", label: "Assigned User", type: "text" },
+    { key: "products", label: "Products", type: "select", options: [...PRODUCTS] },
+    { key: "followup", label: "Follow-up Date", type: "date" },
+    { key: "meetingDate", label: "Meeting Date", type: "date" },
+    { key: "meetingType", label: "Meeting Type", type: "select", options: ["Online", "Offline"] },
+    { key: "notes", label: "Notes", type: "text" },
+    { key: "lostDate", label: "Lost Date", type: "date" },
+    { key: "wonDate", label: "Won Date", type: "date" },
+  ];
+}
+
+/** @deprecated Prefer getFilterFields(leadSources) for dynamic sources */
+export const FILTER_FIELDS: FilterFieldDef[] = getFilterFields();
 
 export const FILTER_OPERATORS: { value: FilterOperator; label: string }[] = [
   { value: "contains", label: "Contains" },

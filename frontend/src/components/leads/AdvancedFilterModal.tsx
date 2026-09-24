@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSettings } from "@/context/SettingsContext";
 import {
-  FILTER_FIELDS,
   FILTER_OPERATORS,
   emptyCondition,
+  getFilterFields,
 } from "@/lib/leadFilters";
 import type {
   FilterCondition,
@@ -38,6 +39,11 @@ export default function AdvancedFilterModal({
   onApply,
   onSave,
 }: AdvancedFilterModalProps) {
+  const { leadSources } = useSettings();
+  const FILTER_FIELDS = useMemo(
+    () => getFilterFields(leadSources),
+    [leadSources],
+  );
   const [name, setName] = useState("");
   const [visibility, setVisibility] = useState<FilterVisibility>("public");
   const [conditions, setConditions] = useState<FilterCondition[]>([

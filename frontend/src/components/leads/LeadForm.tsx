@@ -2,10 +2,12 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { LEAD_STATUSES, PRODUCTS } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useUsers } from "@/context/UsersContext";
 import SearchableSelect from "@/components/shared/SearchableSelect";
 import SearchableMultiSelect from "@/components/shared/SearchableMultiSelect";
-import type { LeadFormData, LeadStatus } from "@/types/lead";
+import type { LeadFormData, LeadSource, LeadStatus } from "@/types/lead";
 
 type LeadFormProps = {
   form: LeadFormData;
@@ -27,23 +29,25 @@ type FieldId =
   | "followup"
   | "mobile"
   | "notes"
-  | "email";
+  | "email"
+  | "leadSource";
 
-const STORAGE_KEY = "techculture-lead-form-order";
+const STORAGE_KEY = "techculture-lead-form-order-v3";
 
+/** Default create/edit layout. Lead Owner is hidden — set from logged-in user. */
 const DEFAULT_ORDER: FieldId[] = [
-  "assigned",
-  "location",
-  "status",
   "entity",
-  "website",
-  "owner",
   "contact",
-  "products",
-  "followup",
   "mobile",
-  "notes",
   "email",
+  "website",
+  "location",
+  "products",
+  "status",
+  "leadSource",
+  "assigned",
+  "followup",
+  "notes",
 ];
 
 function loadOrder(): FieldId[] {
@@ -67,18 +71,30 @@ export default function LeadForm({
   onSubmit,
   onCancel,
 }: LeadFormProps) {
+  const { user } = useAuth();
+  const { leadSources } = useSettings();
   const { userNames } = useUsers();
   const [order, setOrder] = useState<FieldId[]>(DEFAULT_ORDER);
   const [dragId, setDragId] = useState<FieldId | null>(null);
   const [overId, setOverId] = useState<FieldId | null>(null);
 
   useEffect(() => {
-    setOrder(loadOrder());
+    setOrder(loadOrder().filter((id) => id !== "owner"));
   }, []);
 
+  // Lead Owner is hidden — auto-fill from the signed-in user when empty.
+  useEffect(() => {
+    if (!user?.name) return;
+    if (form.owner?.trim()) return;
+    onChange({ ...form, owner: user.name });
+    // Only when owner is empty / user becomes available.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-way auto-fill
+  }, [user?.name, form.owner]);
+
   const persistOrder = (next: FieldId[]) => {
-    setOrder(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    const cleaned = next.filter((id) => id !== "owner");
+    setOrder(cleaned);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
   };
 
   const set = <K extends keyof LeadFormData>(key: K, value: LeadFormData[K]) => {
@@ -106,6 +122,15 @@ export default function LeadForm({
       alert("Select at least one product.");
       return;
     }
+    if (!form.leadSource?.trim()) {
+      alert("Select a lead source.");
+      return;
+    }
+    const owner = form.owner?.trim() || user?.name?.trim() || "";
+    if (!owner) {
+      alert("Lead owner could not be set. Please sign in again.");
+      return;
+    }
     if (form.status === "Meeting" && !form.meetingDate) {
       alert("Meeting date is required.");
       return;
@@ -117,6 +142,9 @@ export default function LeadForm({
     if (form.status === "Completed" && !form.wonDate) {
       alert("Won / Completed date is required.");
       return;
+    }
+    if (form.owner?.trim() !== owner) {
+      onChange({ ...form, owner });
     }
     onSubmit();
   };
@@ -178,6 +206,22 @@ export default function LeadForm({
                 </option>
               ))}
             </select>
+          </>
+        );
+      case "leadSource":
+        return (
+          <>
+            <label>
+              Lead Source <span className="required">*</span>
+            </label>
+            <SearchableSelect
+              required
+              value={form.leadSource}
+              options={leadSources}
+              placeholder="Select source"
+              searchPlaceholder="Search source…"
+              onChange={(v) => set("leadSource", v as LeadSource)}
+            />
           </>
         );
       case "entity":
@@ -438,7 +482,7 @@ export default function LeadForm({
     <form className="lead-form-dnd" onSubmit={handleSubmit}>
       <div className="form-dnd-bar">
         <p>
-          Drag the <strong>⋮⋮</strong> handle to reorder fields. Layout is saved
+          Drag the <strong>:::</strong> handle to reorder fields. Layout is saved
           on this browser.
         </p>
         <button
@@ -486,15 +530,29 @@ export default function LeadForm({
                   setDragId(id);
                   e.dataTransfer.effectAllowed = "move";
                   e.dataTransfer.setData("text/plain", id);
+                  // Prefer dragging the whole field card, not just the tiny handle.
+                  const card = (e.currentTarget as HTMLElement).closest(
+                    ".dnd-field",
+                  ) as HTMLElement | null;
+                  if (card) {
+                    e.dataTransfer.setDragImage(card, 24, 24);
+                  }
                 }}
                 onDragEnd={() => {
                   setDragId(null);
                   setOverId(null);
                 }}
               >
-                <span />
-                <span />
-                <span />
+                <span className="dnd-handle-col" aria-hidden>
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="dnd-handle-col" aria-hidden>
+                  <i />
+                  <i />
+                  <i />
+                </span>
               </button>
               <div className="dnd-field-body">{renderFieldBody(id)}</div>
             </div>

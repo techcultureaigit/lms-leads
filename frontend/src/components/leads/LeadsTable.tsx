@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AdvancedFilterModal from "@/components/leads/AdvancedFilterModal";
 import SavedFiltersPanel from "@/components/leads/SavedFiltersPanel";
 import { useAuth } from "@/context/AuthContext";
+import { useSettings } from "@/context/SettingsContext";
 import { useUsers } from "@/context/UsersContext";
 import { api } from "@/lib/api";
 import { DEMO_TODAY } from "@/lib/demoDate";
@@ -22,12 +23,14 @@ type SortKey =
   | "entity"
   | "contact"
   | "status"
+  | "leadSource"
   | "owner"
   | "followup"
   | "location";
 
 type Filters = {
   status: string;
+  leadSource: string;
   owner: string;
   product: string;
   followupFrom: string;
@@ -47,6 +50,7 @@ type LeadsTableProps = {
 
 const EMPTY_FILTERS: Filters = {
   status: "",
+  leadSource: "",
   owner: "",
   product: "",
   followupFrom: "",
@@ -64,6 +68,7 @@ export default function LeadsTable({
   onExport,
 }: LeadsTableProps) {
   const { user } = useAuth();
+  const { leadSources } = useSettings();
   const { userNames } = useUsers();
   const canUsePrivate = user?.role === "Admin";
   const seed: Filters = {
@@ -128,6 +133,9 @@ export default function LeadsTable({
 
     if (filters.status) {
       rows = rows.filter((l) => l.status === filters.status);
+    }
+    if (filters.leadSource) {
+      rows = rows.filter((l) => (l.leadSource || "") === filters.leadSource);
     }
     if (filters.owner) {
       rows = rows.filter((l) => l.owner === filters.owner);
@@ -269,6 +277,22 @@ export default function LeadsTable({
               </select>
             </div>
             <div className="field">
+              <label>Lead Source</label>
+              <select
+                value={filters.leadSource}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, leadSource: e.target.value }))
+                }
+              >
+                <option value="">All Sources</option>
+                {leadSources.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
               <label>Owner</label>
               <select
                 value={filters.owner}
@@ -378,6 +402,11 @@ export default function LeadsTable({
                 </button>
               </th>
               <th>
+                <button type="button" className="th-sort" onClick={() => toggleSort("leadSource")}>
+                  Source{sortMark("leadSource")}
+                </button>
+              </th>
+              <th>
                 <button type="button" className="th-sort" onClick={() => toggleSort("owner")}>
                   Owner{sortMark("owner")}
                 </button>
@@ -394,7 +423,7 @@ export default function LeadsTable({
           <tbody>
             {!pageRows.length ? (
               <tr>
-                <td colSpan={12} className="empty">
+                <td colSpan={13} className="empty">
                   <div className="table-empty">
                     <h3>No leads found</h3>
                     <p>Try clearing filters or create a new lead.</p>
@@ -437,6 +466,7 @@ export default function LeadsTable({
                       {l.status}
                     </span>
                   </td>
+                  <td>{l.leadSource || "—"}</td>
                   <td>{l.owner}</td>
                   <td>{formatDate(l.followup)}</td>
                   <td>{l.key || "—"}</td>
