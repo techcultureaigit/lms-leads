@@ -1,23 +1,13 @@
 const ENV_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-/** When the app is opened via a LAN IP, localhost would point at the device, not this PC. */
+/**
+ * Browser calls go to the Next server (`/api/...`), which proxies to port 5000.
+ * That keeps create-user and the rest working even when the browser cannot open port 5000 directly.
+ */
 export function resolveApiUrl() {
   if (typeof window === "undefined") return ENV_API_URL;
-  try {
-    const pageHost = window.location.hostname;
-    if (!pageHost || pageHost === "localhost" || pageHost === "127.0.0.1") {
-      return ENV_API_URL;
-    }
-    const url = new URL(ENV_API_URL);
-    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-      url.hostname = pageHost;
-      return url.origin;
-    }
-  } catch {
-    /* keep env URL */
-  }
-  return ENV_API_URL;
+  return "";
 }
 
 const TOKEN_KEY = "tc_token";

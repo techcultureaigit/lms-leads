@@ -3,15 +3,25 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+type SelectOption = string | { value: string; label: string };
+
 type SearchableSelectProps = {
   value: string;
-  options: string[];
+  options: SelectOption[];
   placeholder?: string;
   searchPlaceholder?: string;
   required?: boolean;
   emptyLabel?: string;
   onChange: (value: string) => void;
 };
+
+function optionValue(option: SelectOption) {
+  return typeof option === "string" ? option : option.value;
+}
+
+function optionLabel(option: SelectOption) {
+  return typeof option === "string" ? option : option.label;
+}
 
 type PanelPos = { top: number; left: number; width: number };
 
@@ -34,20 +44,32 @@ export default function SearchableSelect({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return options;
-    return options.filter((o) => o.toLowerCase().includes(q));
+    return options.filter((option) =>
+      optionLabel(option).toLowerCase().includes(q),
+    );
   }, [options, query]);
 
   const updatePos = () => {
     const el = rootRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - r.bottom;
-    const panelH = Math.min(280, window.innerHeight * 0.45);
-    const openUp = spaceBelow < panelH && r.top > spaceBelow;
-    setPos({
-      top: openUp ? Math.max(8, r.top - panelH - 6) : r.bottom + 6,
-      left: r.left,
-      width: r.width,
+    const gap = 6;
+    const height = panelRef.current?.offsetHeight || 0;
+    const needed = height || 120;
+    const spaceBelow = window.innerHeight - r.bottom - gap;
+    const spaceAbove = r.top - gap;
+    const openUp = spaceBelow < needed && spaceAbove > spaceBelow;
+    const top = openUp ? Math.max(8, r.top - needed - gap) : r.bottom + gap;
+    setPos((prev) => {
+      if (
+        prev &&
+        Math.abs(prev.top - top) < 1 &&
+        Math.abs(prev.left - r.left) < 1 &&
+        Math.abs(prev.width - r.width) < 1
+      ) {
+        return prev;
+      }
+      return { top, left: r.left, width: r.width };
     });
   };
 
@@ -57,14 +79,16 @@ export default function SearchableSelect({
       return;
     }
     updatePos();
+    const raf = requestAnimationFrame(() => updatePos());
     const onScroll = () => updatePos();
     window.addEventListener("resize", onScroll);
     window.addEventListener("scroll", onScroll, true);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", onScroll);
       window.removeEventListener("scroll", onScroll, true);
     };
-  }, [open]);
+  }, [open, filtered.length]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,7 +132,7 @@ export default function SearchableSelect({
                 }
                 if (e.key === "Enter" && filtered[0]) {
                   e.preventDefault();
-                  onChange(filtered[0]);
+                  onChange(optionValue(filtered[0]));
                   setOpen(false);
                   setQuery("");
                 }
@@ -118,22 +142,26 @@ export default function SearchableSelect({
               {!filtered.length ? (
                 <div className="search-select-empty">{emptyLabel}</div>
               ) : (
-                filtered.map((opt) => (
+                filtered.map((opt) => {
+                  const itemValue = optionValue(opt);
+                  const itemLabel = optionLabel(opt);
+                  return (
                   <button
                     type="button"
-                    key={opt}
+                    key={itemValue}
                     role="option"
-                    aria-selected={opt === value}
-                    className={`search-select-option ${opt === value ? "is-active" : ""}`}
+                    aria-selected={itemValue === value}
+                    className={`search-select-option ${itemValue === value ? "is-active" : ""}`}
                     onClick={() => {
-                      onChange(opt);
+                      onChange(itemValue);
                       setOpen(false);
                       setQuery("");
                     }}
                   >
-                    {opt}
+                    {itemLabel}
                   </button>
-                ))
+                  );
+                })
               )}
             </div>
           </div>,
@@ -162,7 +190,16 @@ export default function SearchableSelect({
           setQuery("");
         }}
       >
-        <span>{value || placeholder}</span>
+        <span>
+          {options
+            .map((option) => ({
+              value: optionValue(option),
+              label: optionLabel(option),
+            }))
+            .find((option) => option.value === value)?.label ||
+            value ||
+            placeholder}
+        </span>
         <svg viewBox="0 0 12 8" width="12" height="8" aria-hidden>
           <path
             fill="currentColor"

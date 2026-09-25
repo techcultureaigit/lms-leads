@@ -69,20 +69,27 @@ export default function UserForm({
   const { users } = useUsers();
   const { roles, roleNames, getRoleByName } = useRoles();
 
-  const managerNames = users
-    .filter((person) => {
-      const role = person.role.trim().toLowerCase();
-      return role === "admin" || role === "sales manager" || role === "sales lead";
-    })
-    .map((person) => person.name)
-    .filter((name) => name !== excludeManagerName && name !== form.name.trim());
-  if (
-    form.reportingManager &&
-    !managerNames.includes(form.reportingManager)
-  ) {
-    managerNames.unshift(form.reportingManager);
-  }
-  const managerOptions = [NONE_MANAGER, ...managerNames];
+  const managerOptions: { value: string; label: string }[] = [
+    { value: NONE_MANAGER, label: NONE_MANAGER },
+    ...users
+      .filter((person) => {
+        const role = (person.role || "").trim().toLowerCase().replace(/\s+/g, " ");
+        return role === "admin" || role === "sales manager";
+      })
+      .filter(
+        (person) =>
+          person.name !== excludeManagerName && person.name !== form.name.trim(),
+      )
+      .sort((a, b) => {
+        const rank = (role: string) =>
+          role.trim().toLowerCase() === "admin" ? 0 : 1;
+        return rank(a.role) - rank(b.role) || a.name.localeCompare(b.name);
+      })
+      .map((person) => ({
+        value: person.name,
+        label: `${person.name} · ${person.role}`,
+      })),
+  ];
 
   const selectedRole = getRoleByName(form.role);
 

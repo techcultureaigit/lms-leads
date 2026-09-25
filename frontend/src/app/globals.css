@@ -1591,6 +1591,7 @@ textarea.input:focus {
 
 .search-select-panel-fixed {
   position: fixed;
+  top: auto;
   right: auto;
   z-index: 2000;
   max-height: min(320px, 50vh);
