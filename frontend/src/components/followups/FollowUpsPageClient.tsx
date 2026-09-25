@@ -8,6 +8,8 @@ import Topbar from "@/components/layout/Topbar";
 import TodayAgenda from "@/components/shared/TodayAgenda";
 import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 import { getAgendaForDate } from "@/lib/agenda";
 import { DEMO_TODAY } from "@/lib/demoDate";
 import { formatDate, statusClass } from "@/lib/format";
@@ -44,6 +46,9 @@ function FuIcon({ tone }: { tone: Tone }) {
 export default function FollowUpsPageClient() {
   const router = useRouter();
   const { leads, patchLead } = useLeads();
+  const { user } = useAuth();
+  const canCreate = hasPermission(user?.permissions, "leads.create");
+  const canEdit = hasPermission(user?.permissions, "leads.edit");
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [doneCount, setDoneCount] = useState(0);
@@ -241,9 +246,11 @@ export default function FollowUpsPageClient() {
           <div className="fu-empty">
             <h3>No follow-ups in this view</h3>
             <p>Try another filter or create a lead with a follow-up date.</p>
+            {canCreate ? (
             <Link href="/leads/create" className="btn btn-primary dash-cta">
               Create Lead
             </Link>
+            ) : null}
           </div>
         ) : (
           <div className="table-wrap fu-list-wrap">
@@ -301,12 +308,14 @@ export default function FollowUpsPageClient() {
                       onKeyDown={(e) => e.stopPropagation()}
                     >
                       <div className="fu-list-actions">
+                        {canEdit ? (
                         <Link
                           href={`/leads/${item.id}/edit`}
                           className="btn btn-secondary dash-cta"
                         >
                           Edit
                         </Link>
+                        ) : null}
                         <button
                           type="button"
                           className="btn btn-primary dash-cta"

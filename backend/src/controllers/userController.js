@@ -4,6 +4,7 @@ import { ROLE_PERMISSIONS } from "../utils/constants.js";
 import { initialsFromName } from "../utils/constants.js";
 import { toUserDto } from "../utils/mappers.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
+import { getVisibleNames } from "../utils/leadScope.js";
 
 async function permissionsForRole(roleName) {
   const fallback = ROLE_PERMISSIONS[roleName] || [];
@@ -12,14 +13,20 @@ async function permissionsForRole(roleName) {
   return role?.permissions?.length ? role.permissions : fallback;
 }
 
-export const listUsers = asyncHandler(async (_req, res) => {
-  const users = await User.find().sort({ name: 1 });
+export const listUsers = asyncHandler(async (req, res) => {
+  const names = await getVisibleNames(req.user);
+  const users = await User.find(names ? { name: { $in: names } } : {})
+    .sort({ name: 1 });
   res.json({ items: users.map(toUserDto) });
 });
 
 export const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return res.status(404).json({ message: "User not found" });
+  const names = await getVisibleNames(req.user);
+  if (names && !names.includes(user.name)) {
+    return res.status(404).json({ message: "User not found" });
+  }
   res.json({ user: toUserDto(user) });
 });
 

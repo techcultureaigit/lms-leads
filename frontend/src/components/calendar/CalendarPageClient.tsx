@@ -7,6 +7,8 @@ import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 import { api, ApiError } from "@/lib/api";
 import { DEMO_TODAY } from "@/lib/demoDate";
 import { formatDate } from "@/lib/format";
@@ -80,6 +82,9 @@ function googleCalTemplateUrl(title: string, dateStr: string, details: string) {
 
 export default function CalendarPageClient() {
   const { leads } = useLeads();
+  const { user } = useAuth();
+  const canCreate = hasPermission(user?.permissions, "leads.create");
+  const canFollowups = hasPermission(user?.permissions, "followups.manage");
   const searchParams = useSearchParams();
 
   const [year, setYear] = useState(DEMO.getFullYear());
@@ -304,12 +309,16 @@ export default function CalendarPageClient() {
           crumbs={[{ label: "Calendar" }]}
           actions={
             <>
+              {canFollowups ? (
               <Link href="/follow-ups" className="btn btn-secondary dash-cta">
                 Follow-ups
               </Link>
+              ) : null}
+              {canCreate ? (
               <Link href="/leads/create" className="btn btn-primary dash-cta">
                 Create Lead
               </Link>
+              ) : null}
             </>
           }
         />
@@ -567,9 +576,11 @@ export default function CalendarPageClient() {
                     Jump to today
                   </button>
                 )}
+                {canCreate ? (
                 <Link href="/leads/create" className="btn btn-primary dash-cta">
                   Add Lead
                 </Link>
+                ) : null}
               </div>
             ) : (
               <div className="cal-side-list">

@@ -35,3 +35,16 @@ export function requirePermission(...permissions) {
     next();
   };
 }
+
+export function requireAnyPermission(...permissions) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Login required" });
+    }
+    const ok = permissions.some((p) => req.user.permissions.includes(p));
+    if (!ok) {
+      return res.status(403).json({ message: "Permission denied" });
+    }
+    next();
+  };
+}

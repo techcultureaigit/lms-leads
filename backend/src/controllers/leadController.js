@@ -3,6 +3,13 @@ import { Activity } from "../models/Activity.js";
 import { buildKeyDates, toLeadDto } from "../utils/mappers.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
 import { syncOnlineMeetingLink } from "../services/meetingLink.js";
+import { canAccessLead, leadAccessFilter } from "../utils/leadScope.js";
+
+async function withLeadScope(filter, user) {
+  const scope = await leadAccessFilter(user);
+  if (!scope) return filter;
+  return { ...filter, $and: [...(filter.$and || []), scope] };
+}
 
 async function logActivity({ leadId, type, message, actor, meta }) {
   await Activity.create({
@@ -28,7 +35,7 @@ export const listLeads = asyncHandler(async (req, res) => {
     sort = "-createdAt",
   } = req.query;
 
-  const filter = {};
+  const filter = await withLeadScope({}, req.user);
 
   if (status) filter.status = status;
   if (owner) filter.owner = owner;
@@ -73,7 +80,9 @@ export const listLeads = asyncHandler(async (req, res) => {
 
 export const getLead = asyncHandler(async (req, res) => {
   const lead = await Lead.findById(req.params.id);
-  if (!lead) return res.status(404).json({ message: "Lead not found" });
+  if (!lead || !(await canAccessLead(lead, req.user))) {
+    return res.status(404).json({ message: "Lead not found" });
+  }
   res.json({ lead: toLeadDto(lead) });
 });
 
@@ -167,7 +176,9 @@ export const createLead = asyncHandler(async (req, res) => {
 
 export const updateLead = asyncHandler(async (req, res) => {
   const leadDoc = await Lead.findById(req.params.id);
-  if (!leadDoc) return res.status(404).json({ message: "Lead not found" });
+  if (!leadDoc || !(await canAccessLead(leadDoc, req.user))) {
+    return res.status(404).json({ message: "Lead not found" });
+  }
 
   const prev = leadDoc.toObject();
   const body = req.body || {};
@@ -272,6 +283,10 @@ export const updateLead = asyncHandler(async (req, res) => {
 });
 
 export const deleteLead = asyncHandler(async (req, res) => {
+  const existing = await Lead.findById(req.params.id);
+  if (!existing || !(await canAccessLead(existing, req.user))) {
+    return res.status(404).json({ message: "Lead not found" });
+  }
   const lead = await Lead.findByIdAndDelete(req.params.id);
   if (!lead) return res.status(404).json({ message: "Lead not found" });
   await Activity.deleteMany({ leadId: lead._id });
@@ -285,7 +300,7 @@ export const bulkUpdate = asyncHandler(async (req, res) => {
   }
 
   const actor = req.user?.name || "System";
-  const leads = await Lead.find({ _id: { $in: ids } });
+  const leads = await Lead.find(await withLeadScope({ _id: { $in: ids } }, req.user));
   const updated = [];
 
   for (const lead of leads) {
@@ -336,8 +351,12 @@ export const bulkDelete = asyncHandler(async (req, res) => {
   if (!Array.isArray(ids) || !ids.length) {
     return res.status(400).json({ message: "ids array required" });
   }
-  await Activity.deleteMany({ leadId: { $in: ids } });
-  const result = await Lead.deleteMany({ _id: { $in: ids } });
+  const owned = await Lead.find(await withLeadScope({ _id: { $in: ids } }, req.user)).select(
+    "_id",
+  );
+  const ownedIds = owned.map((lead) => lead._id);
+  await Activity.deleteMany({ leadId: { $in: ownedIds } });
+  const result = await Lead.deleteMany({ _id: { $in: ownedIds } });
   res.json({ deleted: result.deletedCount });
 });
 

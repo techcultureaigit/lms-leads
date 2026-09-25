@@ -2833,6 +2833,10 @@ tbody tr:hover {
   margin-bottom: 18px;
 }
 
+.dash-bottom-grid > :only-child {
+  grid-column: 1 / -1;
+}
+
 .chart-meta {
   font-size: 12px;
   font-weight: 600;

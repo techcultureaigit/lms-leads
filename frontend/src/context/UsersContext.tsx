@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import { ROLE_PERMISSIONS, initialsFromName } from "@/lib/roles";
 import type { AppUser, UserFormData, Permission } from "@/types/user";
 
@@ -26,7 +27,7 @@ type UsersContextValue = {
 const UsersContext = createContext<UsersContextValue | null>(null);
 
 export function UsersProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -43,12 +44,17 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    const canLoadUsers = hasPermission(user?.permissions, [
+      "users.view",
+      "leads.create",
+      "leads.edit",
+    ]);
+    if (!isAuthenticated || !canLoadUsers) {
       setUsers([]);
       return;
     }
     refresh();
-  }, [isAuthenticated, refresh]);
+  }, [isAuthenticated, user?.permissions, refresh]);
 
   const getUser = useCallback(
     (id: string) => users.find((u) => u.id === id),
@@ -63,7 +69,7 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: {
           ...form,
-          password: form.password || "User@123",
+          password: form.password.trim() || "User@123",
           initials: initialsFromName(form.name),
           permissions: form.permissions.length
             ? form.permissions
@@ -78,9 +84,13 @@ export function UsersProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = useCallback(
     async (id: string, form: UserFormData & { password?: string }) => {
+      const password = form.password.trim();
       const res = await api<{ user: AppUser }>(`/api/users/${id}`, {
         method: "PUT",
-        body: form,
+        body: {
+          ...form,
+          password: password || undefined,
+        },
       });
       setUsers((prev) => prev.map((u) => (u.id === id ? res.user : u)));
       return res.user;

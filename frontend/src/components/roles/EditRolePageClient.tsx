@@ -8,30 +8,49 @@ import Topbar from "@/components/layout/Topbar";
 import RoleForm, { emptyRoleForm } from "@/components/roles/RoleForm";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRoles } from "@/context/RolesContext";
-import type { RoleFormData } from "@/types/role";
+import { api, ApiError } from "@/lib/api";
+import type { AppRole, RoleFormData } from "@/types/role";
 
 export default function EditRolePageClient() {
   const router = useRouter();
   const params = useParams();
   const id = String(params?.id || "");
-  const { getRole, updateRole, loading } = useRoles();
-  const role = getRole(id);
+  const { updateRole, deleteRole } = useRoles();
+  const [role, setRole] = useState<AppRole | null>(null);
   const [form, setForm] = useState<RoleFormData>(emptyRoleForm());
+  const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!id || loading) return;
-    if (!role) {
-      router.replace("/roles");
-      return;
-    }
-    setForm({
-      name: role.name,
-      description: role.description || "",
-      permissions: [...role.permissions],
-    });
-  }, [id, role, router, loading]);
+    if (!id) return;
+    let cancelled = false;
+    setStatus("loading");
+    setError("");
+    api<{ role: AppRole }>(`/api/roles/${id}`)
+      .then((res) => {
+        if (cancelled) return;
+        setRole(res.role);
+        setForm({
+          name: res.role.name,
+          description: res.role.description || "",
+          permissions: [...res.role.permissions],
+        });
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (!cancelled) setStatus("missing");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
-  if (loading && !role) {
+  useEffect(() => {
+    if (status === "missing") router.replace("/roles");
+  }, [status, router]);
+
+  if (status !== "ready" || !role) {
     return (
       <AppShell>
         <Topbar title="Edit Role" subtitle="Loading…" showSearch={false} />
@@ -41,8 +60,6 @@ export default function EditRolePageClient() {
       </AppShell>
     );
   }
-
-  if (!role) return null;
 
   return (
     <AppShell>
@@ -67,6 +84,8 @@ export default function EditRolePageClient() {
           }
         />
 
+        {error ? <div className="cal-flash err">{error}</div> : null}
+
         <div className="settings-panel">
           <div className="settings-panel-head">
             <div>
@@ -76,6 +95,31 @@ export default function EditRolePageClient() {
               </h2>
               <p>Permissions applied when this role is assigned to a user.</p>
             </div>
+            {role.name !== "Admin" ? (
+              <button
+                type="button"
+                className="btn btn-secondary dash-cta"
+                disabled={saving}
+                onClick={() => {
+                  if (!confirm(`Delete role "${role.name}"?`)) return;
+                  setSaving(true);
+                  deleteRole(role.id)
+                    .then(() => router.push("/roles"))
+                    .catch((err) => {
+                      setSaving(false);
+                      setError(
+                        err instanceof ApiError
+                          ? err.message
+                          : err instanceof Error
+                            ? err.message
+                            : "Could not delete role",
+                      );
+                    });
+                }}
+              >
+                Delete
+              </button>
+            ) : null}
           </div>
           <div className="settings-body">
             <RoleForm
@@ -84,12 +128,20 @@ export default function EditRolePageClient() {
               isSystem={role.isSystem}
               onChange={setForm}
               onSubmit={async () => {
+                setSaving(true);
+                setError("");
                 try {
-                  await updateRole(id, form);
+                  const updated = await updateRole(id, form);
+                  if (updated) setRole(updated);
                   router.push("/roles");
                 } catch (err) {
-                  alert(
-                    err instanceof Error ? err.message : "Could not update role",
+                  setSaving(false);
+                  setError(
+                    err instanceof ApiError
+                      ? err.message
+                      : err instanceof Error
+                        ? err.message
+                        : "Could not update role",
                   );
                 }
               }}

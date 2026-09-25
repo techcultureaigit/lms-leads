@@ -8,12 +8,16 @@ import Topbar from "@/components/layout/Topbar";
 import LeadActivityTimeline from "@/components/leads/LeadActivityTimeline";
 import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 import { formatDate, statusClass } from "@/lib/format";
 import type { Lead } from "@/types/lead";
 
 export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
   const router = useRouter();
   const { fetchLead, getActivities, loadActivities, addNote } = useLeads();
+  const { user } = useAuth();
+  const canEdit = hasPermission(user?.permissions, "leads.edit");
   const [lead, setLead] = useState<Lead | null>(null);
   const [ready, setReady] = useState(false);
   const activities = getActivities(leadId);
@@ -64,12 +68,14 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
               <Link href="/leads" className="btn btn-secondary dash-cta">
                 Back to List
               </Link>
+              {canEdit ? (
               <Link
                 href={`/leads/${lead.id}/edit`}
                 className="btn btn-primary dash-cta"
               >
                 Edit Lead
               </Link>
+              ) : null}
             </>
           }
         />

@@ -14,13 +14,28 @@ import settingsRoutes from "./routes/settingsRoutes.js";
 
 const app = express();
 
+const allowedOrigins = new Set([
+  process.env.CLIENT_URL || "http://localhost:3000",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+]);
+
 app.use(
   cors({
-    origin: [
-      process.env.CLIENT_URL || "http://localhost:3000",
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      // Dev access from the same machine via LAN IP (Next shows Network: http://192.168.x.x:3000).
+      if (/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   }),
 );

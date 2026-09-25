@@ -2,11 +2,8 @@ import type { Permission, UserRole } from "@/types/user";
 
 export const USER_ROLES: UserRole[] = [
   "Admin",
-  "Sales Lead",
-  "Account Executive",
+  "Sales Manager",
   "Business Development",
-  "Relationship Manager",
-  "Viewer",
 ];
 
 export const ALL_PERMISSIONS: { key: Permission; label: string; group: string }[] =
@@ -24,6 +21,15 @@ export const ALL_PERMISSIONS: { key: Permission; label: string; group: string }[
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   Admin: ALL_PERMISSIONS.map((p) => p.key),
+  "Sales Manager": [
+    "leads.view",
+    "leads.create",
+    "leads.edit",
+    "leads.delete",
+    "followups.manage",
+    "reports.view",
+    "users.view",
+  ],
   "Sales Lead": [
     "leads.view",
     "leads.create",
@@ -58,9 +64,10 @@ export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 
 export const ROLE_DESCRIPTIONS: Record<string, string> = {
   Admin: "Full access to leads, users, reports and settings",
+  "Sales Manager": "Sees leads for their own team only",
   "Sales Lead": "Manage team pipeline, leads and follow-ups",
   "Account Executive": "Create and update assigned leads",
-  "Business Development": "Acquire and nurture new opportunities",
+  "Business Development": "Sees only leads assigned to them",
   "Relationship Manager": "Handle existing accounts and follow-ups",
   Viewer: "Read-only access to leads and reports",
 };

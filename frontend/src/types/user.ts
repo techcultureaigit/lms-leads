@@ -36,4 +36,6 @@ export type UserFormData = {
   notes: string;
   permissions: Permission[];
   reportingManager: string;
+  /** Optional. Create: blank uses User@123. Edit: blank keeps the current password. */
+  password: string;
 };

@@ -2,11 +2,14 @@ import { Activity } from "../models/Activity.js";
 import { Lead } from "../models/Lead.js";
 import { toActivityDto } from "../utils/mappers.js";
 import { asyncHandler } from "../middleware/errorHandler.js";
+import { canAccessLead } from "../utils/leadScope.js";
 
 export const listByLead = asyncHandler(async (req, res) => {
   const { leadId } = req.params;
   const lead = await Lead.findById(leadId);
-  if (!lead) return res.status(404).json({ message: "Lead not found" });
+  if (!lead || !(await canAccessLead(lead, req.user))) {
+    return res.status(404).json({ message: "Lead not found" });
+  }
 
   const items = await Activity.find({ leadId }).sort({ createdAt: -1 });
   res.json({ items: items.map(toActivityDto) });
@@ -20,7 +23,9 @@ export const addNote = asyncHandler(async (req, res) => {
   }
 
   const lead = await Lead.findById(leadId);
-  if (!lead) return res.status(404).json({ message: "Lead not found" });
+  if (!lead || !(await canAccessLead(lead, req.user))) {
+    return res.status(404).json({ message: "Lead not found" });
+  }
 
   lead.notes = message.trim();
   await lead.save();

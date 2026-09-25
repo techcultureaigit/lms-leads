@@ -6,6 +6,7 @@ import SavedFiltersPanel from "@/components/leads/SavedFiltersPanel";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { useUsers } from "@/context/UsersContext";
+import { hasPermission } from "@/lib/permissions";
 import { api } from "@/lib/api";
 import { DEMO_TODAY } from "@/lib/demoDate";
 import { formatDate, statusClass } from "@/lib/format";
@@ -70,6 +71,8 @@ export default function LeadsTable({
   const { user } = useAuth();
   const { leadSources } = useSettings();
   const { userNames } = useUsers();
+  const canEdit = hasPermission(user?.permissions, "leads.edit");
+  const canDelete = hasPermission(user?.permissions, "leads.delete");
   const canUsePrivate = user?.role === "Admin";
   const seed: Filters = {
     ...EMPTY_FILTERS,
@@ -481,17 +484,21 @@ export default function LeadsTable({
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     </button>
+                    {canEdit ? (
                     <button type="button" className="edit" title="Edit" onClick={() => onEdit(l.id)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M12 20h9" strokeLinecap="round" />
                         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" strokeLinejoin="round" />
                       </svg>
                     </button>
+                    ) : null}
+                    {canDelete ? (
                     <button type="button" className="delete" title="Delete" onClick={() => onDelete(l.id)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                         <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
+                    ) : null}
                   </td>
                 </tr>
               ))

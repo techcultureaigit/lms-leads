@@ -41,7 +41,7 @@ function optionsToPermissionKeys(options: string[]): Permission[] {
 export function emptyUserForm(): UserFormData {
   return {
     name: "",
-    role: "Account Executive",
+    role: "Business Development",
     email: "",
     phone: "",
     status: "Active",
@@ -54,6 +54,7 @@ export function emptyUserForm(): UserFormData {
       "reports.view",
     ],
     reportingManager: "",
+    password: "",
   };
 }
 
@@ -65,13 +66,23 @@ export default function UserForm({
   onSubmit,
   onCancel,
 }: UserFormProps) {
-  const { userNames } = useUsers();
+  const { users } = useUsers();
   const { roles, roleNames, getRoleByName } = useRoles();
 
-  const managerOptions = [
-    NONE_MANAGER,
-    ...userNames.filter((n) => n !== excludeManagerName && n !== form.name.trim()),
-  ];
+  const managerNames = users
+    .filter((person) => {
+      const role = person.role.trim().toLowerCase();
+      return role === "admin" || role === "sales manager" || role === "sales lead";
+    })
+    .map((person) => person.name)
+    .filter((name) => name !== excludeManagerName && name !== form.name.trim());
+  if (
+    form.reportingManager &&
+    !managerNames.includes(form.reportingManager)
+  ) {
+    managerNames.unshift(form.reportingManager);
+  }
+  const managerOptions = [NONE_MANAGER, ...managerNames];
 
   const selectedRole = getRoleByName(form.role);
 
@@ -96,6 +107,11 @@ export default function UserForm({
     }
     if (!form.permissions.length) {
       alert("Select at least one permission.");
+      return;
+    }
+    const password = form.password.trim();
+    if (password && password.length < 6) {
+      alert("Password must be at least 6 characters, or leave it blank.");
       return;
     }
     onSubmit();
@@ -136,6 +152,23 @@ export default function UserForm({
             onChange={(e) => set("email", e.target.value)}
             placeholder="name@techculture.in"
           />
+        </div>
+
+        <div className="field">
+          <label>Password</label>
+          <input
+            className="input"
+            type="password"
+            autoComplete="new-password"
+            value={form.password}
+            onChange={(e) => set("password", e.target.value)}
+            placeholder={isEditing ? "Leave blank to keep current" : "Enter password"}
+          />
+          {isEditing ? (
+            <p className="role-dropdown-hint">
+              Set a new password to replace the current one. Blank keeps it unchanged.
+            </p>
+          ) : null}
         </div>
 
         <div className="field">
@@ -183,6 +216,10 @@ export default function UserForm({
               set("reportingManager", value === NONE_MANAGER ? "" : value)
             }
           />
+          <p className="role-dropdown-hint">
+            Business Development should report to a Sales Manager. That manager
+            then sees this person's leads.
+          </p>
         </div>
 
         <div className="field full">

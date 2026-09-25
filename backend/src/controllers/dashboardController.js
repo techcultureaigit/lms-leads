@@ -7,6 +7,12 @@ import {
   LEAD_STATUSES,
   PRODUCTS,
 } from "../utils/constants.js";
+import {
+  getVisibleNames,
+  isSalesManagerRole,
+  leadAccessFilter,
+  seesAllLeads,
+} from "../utils/leadScope.js";
 
 const RANGES = new Set(["today", "week", "month", "all"]);
 
@@ -82,9 +88,16 @@ function buildAgenda(leads, date) {
 export const getDashboard = asyncHandler(async (req, res) => {
   const range = RANGES.has(req.query.range) ? req.query.range : "all";
 
+  const orgWide = seesAllLeads(req.user);
+  const names = await getVisibleNames(req.user);
+  const scope = await leadAccessFilter(req.user);
   const [allLeads, allUsers] = await Promise.all([
-    Lead.find({}).sort({ createdAt: -1 }),
-    User.find({}).sort({ name: 1 }),
+    Lead.find(scope || {}).sort({ createdAt: -1 }),
+    orgWide
+      ? User.find({}).sort({ name: 1 })
+      : isSalesManagerRole(req.user)
+        ? User.find({ name: { $in: names || [] } }).sort({ name: 1 })
+        : Promise.resolve([]),
   ]);
 
   const scoped = allLeads.filter((l) => leadInRange(l, range));

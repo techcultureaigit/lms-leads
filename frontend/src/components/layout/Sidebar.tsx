@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { type NavIcon } from "@/lib/nav";
+import { hasPermission, firstAllowedPath } from "@/lib/permissions";
 import { useSidebarUi } from "@/context/SidebarUiContext";
+import type { Permission } from "@/types/user";
 
 function Icon({ name }: { name: NavIcon | "logout" | "collapse" }) {
   const common = {
@@ -96,26 +98,56 @@ function Icon({ name }: { name: NavIcon | "logout" | "collapse" }) {
   }
 }
 
-const GROUPS = [
+const GROUPS: {
+  title: string | null;
+  items: {
+    href: string;
+    label: string;
+    icon: NavIcon;
+    permission?: Permission;
+  }[];
+}[] = [
   {
     title: null,
-    items: [{ href: "/dashboard", label: "Dashboard", icon: "dashboard" as const }],
+    items: [
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: "dashboard",
+        permission: "leads.view",
+      },
+    ],
   },
   {
     title: "Sales",
     items: [
-      { href: "/leads", label: "Leads", icon: "leads" as const },
-      { href: "/follow-ups", label: "Follow-ups", icon: "followups" as const },
-      { href: "/calendar", label: "Calendar", icon: "calendar" as const },
+      { href: "/leads", label: "Leads", icon: "leads", permission: "leads.view" },
+      {
+        href: "/follow-ups",
+        label: "Follow-ups",
+        icon: "followups",
+        permission: "followups.manage",
+      },
+      {
+        href: "/calendar",
+        label: "Calendar",
+        icon: "calendar",
+        permission: "leads.view",
+      },
     ],
   },
   {
     title: "Insights",
     items: [
-      { href: "/reports", label: "Reports", icon: "reports" as const },
-      { href: "/users", label: "Users", icon: "users" as const },
-      { href: "/roles", label: "Roles", icon: "roles" as const },
-      { href: "/settings", label: "Settings", icon: "settings" as const },
+      {
+        href: "/reports",
+        label: "Reports",
+        icon: "reports",
+        permission: "reports.view",
+      },
+      { href: "/users", label: "Users", icon: "users", permission: "users.view" },
+      { href: "/roles", label: "Roles", icon: "roles", permission: "users.view" },
+      { href: "/settings", label: "Settings", icon: "settings" },
     ],
   },
 ];
@@ -138,7 +170,7 @@ export default function Sidebar() {
     <aside className={`sidebar ${collapsed ? "is-collapsed" : ""}`}>
       <div className="brand">
         <Link
-          href="/dashboard"
+          href={firstAllowedPath(user?.permissions)}
           className="brand-logo-link"
           aria-label="TechCulture home"
           onClick={closeMobileNav}
@@ -153,12 +185,17 @@ export default function Sidebar() {
       </div>
 
       <nav className="menu menu-grouped" aria-label="Main">
-        {GROUPS.map((group) => (
+        {GROUPS.map((group) => {
+          const items = group.items.filter((item) =>
+            hasPermission(user?.permissions, item.permission),
+          );
+          if (!items.length) return null;
+          return (
           <div className="nav-group" key={group.title || "main"}>
             {group.title ? (
               <div className="nav-group-title">{group.title}</div>
             ) : null}
-            {group.items.map((item) => {
+            {items.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
@@ -179,7 +216,8 @@ export default function Sidebar() {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       <div className="sidebar-foot">

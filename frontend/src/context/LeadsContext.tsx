@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import type { LeadActivity } from "@/types/activity";
 import type { Lead, LeadFormData, LeadStatus } from "@/types/lead";
 
@@ -35,7 +36,7 @@ type LeadsContextValue = {
 const LeadsContext = createContext<LeadsContextValue | null>(null);
 
 export function LeadsProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [activitiesByLead, setActivitiesByLead] = useState<
     Record<string, LeadActivity[]>
@@ -68,13 +69,13 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !hasPermission(user?.permissions, "leads.view")) {
       setLeads([]);
       setActivitiesByLead({});
       return;
     }
     refreshLeads().catch(() => setLeads([]));
-  }, [isAuthenticated, refreshLeads]);
+  }, [isAuthenticated, user?.permissions, refreshLeads]);
 
   const getLead = useCallback(
     (id: string) => leads.find((l) => l.id === id),

@@ -8,6 +8,7 @@ import Topbar from "@/components/layout/Topbar";
 import UserForm, { emptyUserForm } from "@/components/users/UserForm";
 import PageHeader from "@/components/shared/PageHeader";
 import { useUsers } from "@/context/UsersContext";
+import { ApiError } from "@/lib/api";
 import type { UserFormData } from "@/types/user";
 
 export default function EditUserPageClient({ userId }: { userId: string }) {
@@ -16,6 +17,7 @@ export default function EditUserPageClient({ userId }: { userId: string }) {
   const user = getUser(userId);
   const [form, setForm] = useState<UserFormData>(emptyUserForm());
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (loading) return;
@@ -32,6 +34,7 @@ export default function EditUserPageClient({ userId }: { userId: string }) {
       notes: user.notes || "",
       permissions: [...user.permissions],
       reportingManager: user.reportingManager || "",
+      password: "",
     });
     setReady(true);
   }, [user, loading, router]);
@@ -80,14 +83,22 @@ export default function EditUserPageClient({ userId }: { userId: string }) {
             </div>
           </div>
           <div className="settings-body">
+            {error ? <div className="cal-flash err">{error}</div> : null}
             <UserForm
               form={form}
               isEditing
               excludeManagerName={user.name}
               onChange={setForm}
               onSubmit={async () => {
-                await updateUser(userId, form);
-                router.push("/users");
+                setError("");
+                try {
+                  await updateUser(userId, form);
+                  router.push("/users");
+                } catch (e) {
+                  setError(
+                    e instanceof ApiError ? e.message : "Failed to update user",
+                  );
+                }
               }}
               onCancel={() => router.push("/users")}
             />

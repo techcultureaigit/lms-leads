@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
+import { hasPermission } from "@/lib/permissions";
 import type { AppRole, RoleFormData } from "@/types/role";
 
 type RolesContextValue = {
@@ -27,7 +28,7 @@ type RolesContextValue = {
 const RolesContext = createContext<RolesContextValue | null>(null);
 
 export function RolesProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -44,12 +45,12 @@ export function RolesProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !hasPermission(user?.permissions, ["users.view", "users.manage"])) {
       setRoles([]);
       return;
     }
     refresh();
-  }, [isAuthenticated, refresh]);
+  }, [isAuthenticated, user?.permissions, refresh]);
 
   const getRole = useCallback(
     (id: string) => roles.find((r) => r.id === id),

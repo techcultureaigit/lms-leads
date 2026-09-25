@@ -8,6 +8,8 @@ import Topbar from "@/components/layout/Topbar";
 import LeadsTable from "@/components/leads/LeadsTable";
 import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 import type { Lead } from "@/types/lead";
 
 function exportLeadsCsv(rows: Lead[], filename: string) {
@@ -58,6 +60,8 @@ function LeadsListInner() {
     leads,
     deleteLead,
   } = useLeads();
+  const { user } = useAuth();
+  const canCreate = hasPermission(user?.permissions, "leads.create");
   const [globalSearch, setGlobalSearch] = useState("");
   const [tableSearch, setTableSearch] = useState("");
 
@@ -96,14 +100,16 @@ function LeadsListInner() {
           subtitle="Filter, sort, paginate and manage every lead from here."
           crumbs={[{ label: "Leads" }, { label: "Leads List" }]}
           actions={
-            <>
-              <Link href="/leads/import" className="btn btn-secondary dash-cta">
-                Import Leads
-              </Link>
-              <Link href="/leads/create" className="btn btn-primary dash-cta">
-                Create Lead
-              </Link>
-            </>
+            canCreate ? (
+              <>
+                <Link href="/leads/import" className="btn btn-secondary dash-cta">
+                  Import Leads
+                </Link>
+                <Link href="/leads/create" className="btn btn-primary dash-cta">
+                  Create Lead
+                </Link>
+              </>
+            ) : null
           }
         />
 

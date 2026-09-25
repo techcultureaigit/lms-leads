@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import { TEAM_USERS } from "@/lib/constants";
+import { useAuth } from "@/context/AuthContext";
 import { useLeads } from "@/context/LeadsContext";
 import type { LeadStatus } from "@/types/lead";
 
@@ -104,6 +105,8 @@ function VolumeChart({ values, labels }: { values: number[]; labels: string[] })
 }
 
 export default function ReportsPageClient() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
   const { leads } = useLeads();
   const total = leads.length;
   const won = leads.filter((l) => l.status === "Completed").length;
@@ -137,10 +140,24 @@ export default function ReportsPageClient() {
 
   const metrics: { label: string; value: string | number; tone: Tone; meta: string }[] = [
     { label: "Win Rate", value: `${winRate}%`, tone: "blue", meta: `${won} won · ${lost} lost` },
-    { label: "Total Leads", value: total, tone: "indigo", meta: "All pipeline records" },
+    {
+      label: "Total Leads",
+      value: total,
+      tone: "indigo",
+      meta: isAdmin ? "All pipeline records" : "Your assigned leads",
+    },
     { label: "Meetings", value: meeting, tone: "purple", meta: "Booked this cycle" },
     { label: "Follow-ups Open", value: followups, tone: "amber", meta: "Pending actions" },
-    { label: "Active Owners", value: TEAM_USERS.length, tone: "cyan", meta: "Team coverage" },
+    ...(isAdmin
+      ? [
+          {
+            label: "Active Owners",
+            value: TEAM_USERS.length,
+            tone: "cyan" as Tone,
+            meta: "Team coverage",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -298,6 +315,7 @@ export default function ReportsPageClient() {
             </div>
           </div>
 
+          {isAdmin ? (
           <div className="report-card">
             <div className="report-card-head">
               <div>
@@ -330,6 +348,7 @@ export default function ReportsPageClient() {
               ))}
             </div>
           </div>
+          ) : null}
         </div>
       </section>
     </AppShell>

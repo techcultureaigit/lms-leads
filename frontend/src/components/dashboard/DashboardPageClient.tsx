@@ -9,6 +9,8 @@ import PageHeader from "@/components/shared/PageHeader";
 import TodayAgenda from "@/components/shared/TodayAgenda";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, statusClass } from "@/lib/format";
+import { hasPermission } from "@/lib/permissions";
+import { useAuth } from "@/context/AuthContext";
 import type { AgendaItem } from "@/lib/agenda";
 import type { LeadStatus } from "@/types/lead";
 
@@ -297,8 +299,23 @@ function buildMetricCards(m: DashboardPayload["metrics"]) {
   ];
 }
 
+const ADMIN_METRICS = new Set(["Assigned Owners", "Products Catalog"]);
+const FOLLOWUP_METRICS = new Set([
+  "Follow-ups Open",
+  "Overdue Follow-ups",
+  "Priority Queue",
+]);
+
 export default function DashboardPageClient() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "Admin";
+  const seesTeam =
+    isAdmin || user?.role === "Sales Manager" || user?.role === "Sales Lead";
+  const canFollowups = hasPermission(user?.permissions, "followups.manage");
+  const canReports = hasPermission(user?.permissions, "reports.view");
+  const canEdit = hasPermission(user?.permissions, "leads.edit");
+  const canManageUsers = hasPermission(user?.permissions, "users.manage");
   const [range, setRange] = useState<DateRange>("all");
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -324,7 +341,15 @@ export default function DashboardPageClient() {
     load(range);
   }, [range, load]);
 
-  const metrics = data ? buildMetricCards(data.metrics) : [];
+  const metrics = data
+    ? buildMetricCards(data.metrics).filter((card) => {
+        if (!seesTeam && card.label === "Team Members") return false;
+        if (!isAdmin && ADMIN_METRICS.has(card.label)) return false;
+        if (!canFollowups && FOLLOWUP_METRICS.has(card.label)) return false;
+        if (!canReports && card.label === "Win Rate") return false;
+        return true;
+      })
+    : [];
   const funnelMax = data
     ? Math.max(...data.funnel.map((f) => f.count), 1)
     : 1;
@@ -336,7 +361,13 @@ export default function DashboardPageClient() {
       <section className="content dash-page">
         <PageHeader
           title="Dashboard"
-          subtitle="Welcome back! Here's what's happening with your leads today."
+          subtitle={
+            isAdmin
+              ? "Welcome back! Here's what's happening across the company today."
+              : seesTeam
+                ? "Welcome back! Here's what's happening with your team's leads."
+                : "Welcome back! Here's what's happening with your assigned leads."
+          }
           crumbs={[{ label: "Dashboard" }]}
           actions={
             <>
@@ -413,9 +444,11 @@ export default function DashboardPageClient() {
               <div className="chart-card">
                 <div className="chart-card-head">
                   <h2>Pipeline Funnel</h2>
-                  <Link href="/reports" className="text-link">
-                    Reports
-                  </Link>
+                  {canReports ? (
+                    <Link href="/reports" className="text-link">
+                      Reports
+                    </Link>
+                  ) : null}
                 </div>
                 <div className="funnel-list">
                   {data.funnel.map((f) => (
@@ -471,11 +504,17 @@ export default function DashboardPageClient() {
                             className="dash-click-row"
                             tabIndex={0}
                             role="link"
-                            onClick={() => router.push(`/leads/${l.id}/edit`)}
+                            onClick={() =>
+                              router.push(
+                                canEdit ? `/leads/${l.id}/edit` : `/leads/${l.id}`,
+                              )
+                            }
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                router.push(`/leads/${l.id}/edit`);
+                                router.push(
+                                  canEdit ? `/leads/${l.id}/edit` : `/leads/${l.id}`,
+                                );
                               }
                             }}
                           >
@@ -498,12 +537,15 @@ export default function DashboardPageClient() {
                 </div>
               </div>
 
+              {seesTeam ? (
               <div className="chart-card">
                 <div className="chart-card-head">
                   <h2>Team Performance</h2>
-                  <Link href="/users" className="text-link">
-                    Manage
-                  </Link>
+                  {canManageUsers ? (
+                    <Link href="/users" className="text-link">
+                      Manage
+                    </Link>
+                  ) : null}
                 </div>
                 <div className="team-perf-list dash-scroll-panel">
                   {!data.teamPerformance.length ? (
@@ -517,7 +559,9 @@ export default function DashboardPageClient() {
                         type="button"
                         className="team-perf-row dash-click-row"
                         key={u.id}
-                        onClick={() => router.push(`/users/${u.id}/edit`)}
+                        onClick={() => {
+                          if (canManageUsers) router.push(`/users/${u.id}/edit`);
+                        }}
                       >
                         <div className="team-perf-left">
                           <span className="team-av">{u.initials}</span>
@@ -540,6 +584,7 @@ export default function DashboardPageClient() {
                   )}
                 </div>
               </div>
+              ) : null}
             </div>
           </>
         ) : null}

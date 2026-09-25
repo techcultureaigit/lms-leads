@@ -7,6 +7,8 @@ import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import { useRoles } from "@/context/RolesContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 
 type Tone = "blue" | "indigo" | "amber" | "cyan" | "purple";
 
@@ -24,6 +26,8 @@ function RoleIcon({ tone }: { tone: Tone }) {
 export default function RolesPageClient() {
   const router = useRouter();
   const { roles, deleteRole } = useRoles();
+  const { user } = useAuth();
+  const canManage = hasPermission(user?.permissions, "users.manage");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -102,9 +106,11 @@ export default function RolesPageClient() {
               <Link href="/users" className="btn btn-secondary dash-cta">
                 Users
               </Link>
+              {canManage ? (
               <Link href="/roles/create" className="btn btn-primary dash-cta">
                 Create Role
               </Link>
+              ) : null}
             </>
           }
         />
@@ -141,9 +147,11 @@ export default function RolesPageClient() {
           <div className="fu-empty">
             <h3>No roles found</h3>
             <p>Try another search or create a new role.</p>
+            {canManage ? (
             <Link href="/roles/create" className="btn btn-primary dash-cta">
               Create Role
             </Link>
+            ) : null}
           </div>
         ) : (
           <div className="table-wrap users-list-wrap">
@@ -192,7 +200,7 @@ export default function RolesPageClient() {
                       onKeyDown={(e) => e.stopPropagation()}
                     >
                       <div className="fu-list-actions">
-                        {!role.isSystem ? (
+                        {canManage && role.name !== "Admin" ? (
                           <button
                             type="button"
                             className="btn btn-secondary dash-cta"
@@ -207,6 +215,7 @@ export default function RolesPageClient() {
                             Delete
                           </button>
                         ) : null}
+                        {canManage ? (
                         <button
                           type="button"
                           className="btn btn-primary dash-cta"
@@ -214,6 +223,9 @@ export default function RolesPageClient() {
                         >
                           Edit
                         </button>
+                        ) : (
+                          <span className="muted">View only</span>
+                        )}
                       </div>
                     </td>
                   </tr>

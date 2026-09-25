@@ -8,6 +8,8 @@ import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
 import { useUsers } from "@/context/UsersContext";
+import { useAuth } from "@/context/AuthContext";
+import { hasPermission } from "@/lib/permissions";
 
 type Tone = "blue" | "indigo" | "amber" | "cyan" | "purple" | "rose" | "sky" | "orange";
 type Filter = "all" | "Active" | "Away" | "Inactive";
@@ -31,6 +33,8 @@ export default function UsersPageClient() {
   const router = useRouter();
   const { leads } = useLeads();
   const { users, deleteUser } = useUsers();
+  const { user: me } = useAuth();
+  const canManage = hasPermission(me?.permissions, "users.manage");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -130,9 +134,11 @@ export default function UsersPageClient() {
               <Link href="/leads" className="btn btn-secondary dash-cta">
                 View Leads
               </Link>
+              {canManage ? (
               <Link href="/users/create" className="btn btn-primary dash-cta">
                 Create User
               </Link>
+              ) : null}
             </>
           }
         />
@@ -203,9 +209,11 @@ export default function UsersPageClient() {
           <div className="fu-empty">
             <h3>No users found</h3>
             <p>Try another search or create a new user.</p>
+            {canManage ? (
             <Link href="/users/create" className="btn btn-primary dash-cta">
               Create User
             </Link>
+            ) : null}
           </div>
         ) : (
           <div className="table-wrap users-list-wrap">
@@ -271,6 +279,7 @@ export default function UsersPageClient() {
                       onKeyDown={(e) => e.stopPropagation()}
                     >
                       <div className="fu-list-actions">
+                        {canManage ? (
                         <button
                           type="button"
                           className="btn btn-secondary dash-cta"
@@ -280,6 +289,8 @@ export default function UsersPageClient() {
                         >
                           Delete
                         </button>
+                        ) : null}
+                        {canManage ? (
                         <button
                           type="button"
                           className="btn btn-primary dash-cta"
@@ -287,6 +298,9 @@ export default function UsersPageClient() {
                         >
                           Edit
                         </button>
+                        ) : (
+                          <span className="muted">View only</span>
+                        )}
                       </div>
                     </td>
                   </tr>

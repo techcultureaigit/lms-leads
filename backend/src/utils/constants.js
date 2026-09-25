@@ -1,11 +1,4 @@
-export const USER_ROLES = [
-  "Admin",
-  "Sales Lead",
-  "Account Executive",
-  "Business Development",
-  "Relationship Manager",
-  "Viewer",
-];
+export const USER_ROLES = ["Admin", "Sales Manager", "Business Development"];
 
 export const ALL_PERMISSIONS = [
   "leads.view",
@@ -21,6 +14,15 @@ export const ALL_PERMISSIONS = [
 
 export const ROLE_PERMISSIONS = {
   Admin: [...ALL_PERMISSIONS],
+  "Sales Manager": [
+    "leads.view",
+    "leads.create",
+    "leads.edit",
+    "leads.delete",
+    "followups.manage",
+    "reports.view",
+    "users.view",
+  ],
   "Sales Lead": [
     "leads.view",
     "leads.create",
@@ -55,9 +57,10 @@ export const ROLE_PERMISSIONS = {
 
 export const ROLE_DESCRIPTIONS = {
   Admin: "Full access to leads, users, reports and settings",
+  "Sales Manager": "Sees leads for their own team only",
   "Sales Lead": "Manage team pipeline, leads and follow-ups",
   "Account Executive": "Create and update assigned leads",
-  "Business Development": "Acquire and nurture new opportunities",
+  "Business Development": "Sees only leads assigned to them",
   "Relationship Manager": "Handle existing accounts and follow-ups",
   Viewer: "Read-only access to leads and reports",
 };

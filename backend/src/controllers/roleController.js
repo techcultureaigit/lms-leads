@@ -1,4 +1,5 @@
 import { Role } from "../models/Role.js";
+import { User } from "../models/User.js";
 import {
   ALL_PERMISSIONS,
   ROLE_DESCRIPTIONS,
@@ -21,18 +22,29 @@ function toRoleDto(doc) {
 }
 
 async function ensureSystemRoles() {
-  const count = await Role.countDocuments();
-  if (count > 0) return;
-  await Promise.all(
-    Object.entries(ROLE_PERMISSIONS).map(([name, permissions]) =>
-      Role.create({
-        name,
-        description: ROLE_DESCRIPTIONS[name] || "",
-        permissions,
-        isSystem: true,
-      }),
-    ),
-  );
+  const manager = await Role.findOne({ name: "Sales Manager" });
+  const legacy = await Role.findOne({ name: "Sales Lead" });
+  if (legacy && !manager) {
+    legacy.name = "Sales Manager";
+    legacy.description = ROLE_DESCRIPTIONS["Sales Manager"];
+    await legacy.save();
+    await User.updateMany(
+      { role: "Sales Lead" },
+      { $set: { role: "Sales Manager" } },
+    );
+  }
+
+  const hierarchy = ["Admin", "Sales Manager", "Business Development"];
+  for (const name of hierarchy) {
+    const exists = await Role.findOne({ name });
+    if (exists) continue;
+    await Role.create({
+      name,
+      description: ROLE_DESCRIPTIONS[name] || "",
+      permissions: ROLE_PERMISSIONS[name] || [],
+      isSystem: true,
+    });
+  }
 }
 
 export const listRoles = asyncHandler(async (_req, res) => {
@@ -80,6 +92,7 @@ export const updateRole = asyncHandler(async (req, res) => {
   if (!role) return res.status(404).json({ message: "Role not found" });
 
   const { name, description, permissions } = req.body || {};
+  const previousName = role.name;
 
   if (name?.trim() && name.trim() !== role.name) {
     if (role.isSystem) {
@@ -104,14 +117,24 @@ export const updateRole = asyncHandler(async (req, res) => {
   }
 
   await role.save();
+  await User.updateMany(
+    { role: previousName },
+    { $set: { role: role.name, permissions: role.permissions } },
+  );
   res.json({ role: toRoleDto(role) });
 });
 
 export const deleteRole = asyncHandler(async (req, res) => {
   const role = await Role.findById(req.params.id);
   if (!role) return res.status(404).json({ message: "Role not found" });
-  if (role.isSystem) {
-    return res.status(400).json({ message: "System roles cannot be deleted" });
+  if (role.name === "Admin") {
+    return res.status(400).json({ message: "Admin role cannot be deleted" });
+  }
+  const inUse = await User.countDocuments({ role: role.name });
+  if (inUse) {
+    return res.status(400).json({
+      message: `${inUse} user(s) still have this role. Reassign them before deleting.`,
+    });
   }
   await role.deleteOne();
   res.json({ message: "Role deleted", id: String(role._id) });

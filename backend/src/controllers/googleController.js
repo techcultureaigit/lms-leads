@@ -11,6 +11,7 @@ import {
   calendarApi,
   buildLeadEvent,
 } from "../utils/googleCalendar.js";
+import { leadAccessFilter } from "../utils/leadScope.js";
 
 const CLIENT_URL = () => process.env.CLIENT_URL || "http://localhost:3000";
 
@@ -119,7 +120,8 @@ export const syncLeads = asyncHandler(async (req, res) => {
 
   const auth = await refreshAndPersist(user);
   const cal = calendarApi(auth);
-  const leads = await Lead.find({});
+  const scope = await leadAccessFilter(req.user);
+  const leads = await Lead.find(scope || {});
 
   let created = 0;
   let updated = 0;
