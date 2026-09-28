@@ -270,12 +270,9 @@ export default function LeadForm({
       case "contact":
         return (
           <>
-            <label>
-              Contact Person Name <span className="required">*</span>
-            </label>
+            <label>Contact Person Name</label>
             <input
               className="input"
-              required
               value={form.contact}
               onChange={(e) => set("contact", e.target.value)}
               placeholder="Enter contact person name"

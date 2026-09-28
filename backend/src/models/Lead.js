@@ -4,7 +4,7 @@ import { LEAD_STATUSES } from "../utils/constants.js";
 const leadSchema = new mongoose.Schema(
   {
     entity: { type: String, required: true, trim: true },
-    contact: { type: String, required: true, trim: true },
+    contact: { type: String, default: "", trim: true },
     mobile: { type: String, required: true, trim: true },
     email: { type: String, default: "", trim: true },
     location: { type: String, default: "", trim: true },

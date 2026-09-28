@@ -73,6 +73,13 @@ function Icon({ name }: { name: NavIcon | "logout" | "collapse" }) {
           <path d="M9.5 12.5 11 14l3.5-3.5" />
         </svg>
       );
+    case "email":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m4 7 8 6 8-6" />
+        </svg>
+      );
     case "settings":
       return (
         <svg viewBox="0 0 24 24" {...common}>
@@ -148,6 +155,41 @@ const GROUPS: {
       { href: "/users", label: "Users", icon: "users", permission: "users.view" },
       { href: "/roles", label: "Roles", icon: "roles", permission: "users.view" },
       { href: "/settings", label: "Settings", icon: "settings" },
+    ],
+  },
+  {
+    title: "Email",
+    items: [
+      {
+        href: "/email/templates",
+        label: "Email Templates",
+        icon: "email",
+        permission: "email.list",
+      },
+      {
+        href: "/email/create",
+        label: "Create Template",
+        icon: "email",
+        permission: "email.create",
+      },
+      {
+        href: "/email/send",
+        label: "Send Email",
+        icon: "email",
+        permission: "email.send",
+      },
+      {
+        href: "/email/reports",
+        label: "Send Reports",
+        icon: "email",
+        permission: "email.reports",
+      },
+      {
+        href: "/email/history",
+        label: "Email History",
+        icon: "email",
+        permission: "email.history",
+      },
     ],
   },
 ];

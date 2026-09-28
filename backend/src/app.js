@@ -11,6 +11,8 @@ import googleRoutes from "./routes/googleRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import roleRoutes from "./routes/roleRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import emailRoutes from "./routes/emailRoutes.js";
+import emailHistoryRoutes from "./routes/emailHistoryRoutes.js";
 
 const app = express();
 
@@ -63,6 +65,8 @@ app.use("/api/google", googleRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/email-templates", emailRoutes);
+app.use("/api/email-history", emailHistoryRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

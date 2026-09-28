@@ -10,6 +10,11 @@ export const ALL_PERMISSIONS = [
   "users.view",
   "users.manage",
   "settings.manage",
+  "email.list",
+  "email.create",
+  "email.send",
+  "email.reports",
+  "email.history",
 ];
 
 export const ROLE_PERMISSIONS = {

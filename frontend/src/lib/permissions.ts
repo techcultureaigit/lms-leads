@@ -40,6 +40,17 @@ const ROUTE_RULES: RouteRule[] = [
   },
   { match: (p) => p === "/roles" || p.startsWith("/roles/"), any: ["users.view"] },
   { match: (p) => p.startsWith("/dashboard"), any: ["leads.view"] },
+  {
+    match: (p) => p === "/email/create" || /^\/email\/templates\/[^/]+\/edit/.test(p),
+    any: ["email.create"],
+  },
+  {
+    match: (p) => p.startsWith("/email/templates"),
+    any: ["email.list", "email.create"],
+  },
+  { match: (p) => p.startsWith("/email/send"), any: ["email.send"] },
+  { match: (p) => p.startsWith("/email/reports"), any: ["email.reports"] },
+  { match: (p) => p.startsWith("/email/history"), any: ["email.history"] },
   { match: (p) => p.startsWith("/settings"), any: [] },
 ];
 
@@ -61,6 +72,11 @@ const HOME_ORDER: { href: string; any: Permission[] }[] = [
   { href: "/reports", any: ["reports.view"] },
   { href: "/users", any: ["users.view"] },
   { href: "/roles", any: ["users.view"] },
+  { href: "/email/templates", any: ["email.list"] },
+  { href: "/email/create", any: ["email.create"] },
+  { href: "/email/send", any: ["email.send"] },
+  { href: "/email/reports", any: ["email.reports"] },
+  { href: "/email/history", any: ["email.history"] },
   { href: "/settings", any: [] },
 ];
 

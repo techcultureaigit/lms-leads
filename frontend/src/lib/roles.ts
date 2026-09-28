@@ -17,6 +17,11 @@ export const ALL_PERMISSIONS: { key: Permission; label: string; group: string }[
     { key: "users.view", label: "View Users", group: "Users" },
     { key: "users.manage", label: "Manage Users", group: "Users" },
     { key: "settings.manage", label: "Manage Settings", group: "Workspace" },
+    { key: "email.list", label: "Email Templates", group: "Email" },
+    { key: "email.create", label: "Create Email Template", group: "Email" },
+    { key: "email.send", label: "Send Email", group: "Email" },
+    { key: "email.reports", label: "Email Reports", group: "Email" },
+    { key: "email.history", label: "Email History", group: "Email" },
   ];
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {

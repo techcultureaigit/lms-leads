@@ -7,6 +7,7 @@ export const NAV_ITEMS = [
   { href: "/users", label: "Users", icon: "users" },
   { href: "/roles", label: "Roles", icon: "roles" },
   { href: "/settings", label: "Settings", icon: "settings" },
+  { href: "/email/templates", label: "Email", icon: "email" },
 ] as const;
 
 export type NavIcon = (typeof NAV_ITEMS)[number]["icon"];

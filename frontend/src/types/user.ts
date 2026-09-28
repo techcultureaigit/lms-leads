@@ -12,7 +12,12 @@ export type Permission =
   | "reports.view"
   | "users.view"
   | "users.manage"
-  | "settings.manage";
+  | "settings.manage"
+  | "email.list"
+  | "email.create"
+  | "email.send"
+  | "email.reports"
+  | "email.history";
 
 export interface AppUser {
   id: string;

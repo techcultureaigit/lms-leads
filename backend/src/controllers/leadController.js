@@ -88,9 +88,9 @@ export const getLead = asyncHandler(async (req, res) => {
 
 export const createLead = asyncHandler(async (req, res) => {
   const body = req.body || {};
-  if (!body.entity || !body.contact || !body.mobile || !body.owner || !body.assigned) {
+  if (!body.entity || !body.mobile || !body.owner || !body.assigned) {
     return res.status(400).json({
-      message: "entity, contact, mobile, owner, assigned are required",
+      message: "entity, mobile, owner, assigned are required",
     });
   }
   if (!body.leadSource) {
@@ -117,7 +117,7 @@ export const createLead = asyncHandler(async (req, res) => {
 
   let lead = await Lead.create({
     entity: body.entity,
-    contact: body.contact,
+    contact: body.contact || "",
     mobile: body.mobile,
     email: body.email || "",
     location: body.location || "",
