@@ -8,7 +8,9 @@ import { hasPermission, firstAllowedPath } from "@/lib/permissions";
 import { useSidebarUi } from "@/context/SidebarUiContext";
 import type { Permission } from "@/types/user";
 
-function Icon({ name }: { name: NavIcon | "logout" | "collapse" }) {
+type SidebarIcon = NavIcon | "email-send" | "email-reports" | "email-history" | "logout" | "collapse";
+
+function Icon({ name }: { name: SidebarIcon }) {
   const common = {
     fill: "none",
     stroke: "currentColor",
@@ -80,6 +82,27 @@ function Icon({ name }: { name: NavIcon | "logout" | "collapse" }) {
           <path d="m4 7 8 6 8-6" />
         </svg>
       );
+    case "email-send":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M22 2 11 13" />
+          <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+        </svg>
+      );
+    case "email-reports":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6M8 13h8M8 17h5" />
+        </svg>
+      );
+    case "email-history":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v6l4 2" />
+        </svg>
+      );
     case "settings":
       return (
         <svg viewBox="0 0 24 24" {...common}>
@@ -110,7 +133,7 @@ const GROUPS: {
   items: {
     href: string;
     label: string;
-    icon: NavIcon;
+    icon: SidebarIcon;
     permission?: Permission;
   }[];
 }[] = [
@@ -167,27 +190,21 @@ const GROUPS: {
         permission: "email.list",
       },
       {
-        href: "/email/create",
-        label: "Create Template",
-        icon: "email",
-        permission: "email.create",
-      },
-      {
         href: "/email/send",
         label: "Send Email",
-        icon: "email",
+        icon: "email-send",
         permission: "email.send",
       },
       {
         href: "/email/reports",
         label: "Send Reports",
-        icon: "email",
+        icon: "email-reports",
         permission: "email.reports",
       },
       {
         href: "/email/history",
         label: "Email History",
-        icon: "email",
+        icon: "email-history",
         permission: "email.history",
       },
     ],
