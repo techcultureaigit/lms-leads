@@ -221,7 +221,7 @@ export default function Sidebar() {
           <img
             src={collapsed ? "/logo-mark.png" : "/logo.png"}
             alt="TechCulture"
-            className={`brand-logo ${collapsed ? "is-mark" : ""}`}
+            className={collapsed ? "brand-mark-icon" : "brand-logo"}
           />
         </Link>
       </div>
