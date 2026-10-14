@@ -75,6 +75,10 @@ export default function LeadModal({ lead, onClose }: LeadModalProps) {
                 <b>Lead Owner</b>
                 <p>{lead.owner}</p>
               </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <b>Remarks</b>
+                <p>{lead.notes || "—"}</p>
+              </div>
               <div>
                 <b>Lead Status</b>
                 <p>{lead.status}</p>
@@ -94,10 +98,6 @@ export default function LeadModal({ lead, onClose }: LeadModalProps) {
               <div style={{ gridColumn: "1 / -1" }}>
                 <b>Key Dates / Meeting Details</b>
                 <p>{lead.key || "—"}</p>
-              </div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <b>Latest Notes</b>
-                <p>{lead.notes || "—"}</p>
               </div>
             </div>
 

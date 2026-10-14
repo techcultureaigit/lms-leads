@@ -331,7 +331,7 @@ export default function LeadForm({
       case "notes":
         return (
           <>
-            <label>Notes / Remarks</label>
+            <label>Remarks</label>
             <textarea
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}

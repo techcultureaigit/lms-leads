@@ -125,6 +125,10 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
                 <b>Lead Owner</b>
                 <p>{lead.owner || "—"}</p>
               </div>
+              <div className="lead-view-full">
+                <b>Remarks</b>
+                <p>{lead.notes || "—"}</p>
+              </div>
               <div>
                 <b>Lead Status</b>
                 <p>{lead.status}</p>
@@ -160,10 +164,6 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
                   </p>
                 </div>
               ) : null}
-              <div className="lead-view-full">
-                <b>Latest Notes</b>
-                <p>{lead.notes || "—"}</p>
-              </div>
             </div>
           </div>
 
