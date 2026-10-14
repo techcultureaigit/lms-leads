@@ -153,6 +153,7 @@ function scoreHeader(header: string, alias: string): number {
 }
 
 function pickField(header: string): FieldKey | null {
+  if (header === "active client" || header.startsWith("registration no")) return null;
   let best: { field: FieldKey; score: number } | null = null;
   for (const field of FIELD_PRIORITY) {
     for (const alias of FIELD_ALIASES[field]) {
@@ -405,11 +406,12 @@ export async function parseLeadImportFile(
 
   // Fallbacks for entity-like columns
   if (colIndex.entity === undefined) {
-    const companyIdx = headerCells.findIndex((h) =>
-      /trade name|trading name|company|firm|broker|organi[sz]ation|client|dealer|shop|business/.test(
+    const companyIdx = headerCells.findIndex((h) => {
+      if (!h || h === "active client" || h.startsWith("registration no")) return false;
+      return /trade name|trading name|company|firm|broker|organi[sz]ation|client|dealer|shop|business/.test(
         h,
-      ),
-    );
+      );
+    });
     if (companyIdx >= 0) {
       colIndex.entity = companyIdx;
       mapped.entity = String(headerRaw[companyIdx] ?? "");
@@ -514,11 +516,12 @@ export async function parseLeadImportFile(
       /^(https?:\/\/)?([\w-]+\.)+[\w-]+/i.test(website) ||
       website.includes(".");
 
-    const noteParts = [get("notes"), extraNotes];
-    if (website && !websiteLooksValid) {
+    const remark = get("notes").trim();
+    const noteParts = remark ? [remark] : [extraNotes];
+    if (!remark && website && !websiteLooksValid) {
       noteParts.push(`Web Tech: ${website}`);
-      website = "";
     }
+    if (website && !websiteLooksValid) website = "";
 
     rows.push({
       entity: entity || contact || `Lead ${mobile || r + 1}`,
