@@ -46,6 +46,7 @@ type LeadsTableProps = {
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onBulkDelete?: (ids: string[]) => Promise<void> | void;
   onExport: () => void;
 };
 
@@ -66,6 +67,7 @@ export default function LeadsTable({
   onView,
   onEdit,
   onDelete,
+  onBulkDelete,
   onExport,
 }: LeadsTableProps) {
   const { user } = useAuth();
@@ -112,6 +114,8 @@ export default function LeadsTable({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const refreshSavedFilters = useCallback(async () => {
     try {
@@ -195,6 +199,54 @@ export default function LeadsTable({
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
+  useEffect(() => {
+    const visible = new Set(filtered.map((lead) => lead.id));
+    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [filtered]);
+
+  const pageIds = pageRows.map((lead) => lead.id);
+  const allPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
+  const somePageSelected =
+    pageIds.some((id) => selectedIds.includes(id)) && !allPageSelected;
+
+  const toggleRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const togglePage = () => {
+    setSelectedIds((prev) => {
+      if (allPageSelected) {
+        return prev.filter((id) => !pageIds.includes(id));
+      }
+      const next = new Set(prev);
+      pageIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const runBulkDelete = async () => {
+    if (!canDelete || !onBulkDelete || !selectedIds.length || bulkBusy) return;
+    if (
+      !confirm(
+        `Delete ${selectedIds.length} selected lead${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      await onBulkDelete(selectedIds);
+      setSelectedIds([]);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -209,6 +261,7 @@ export default function LeadsTable({
 
   const start = filtered.length ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, filtered.length);
+  const colCount = canDelete ? 14 : 13;
 
   return (
     <div className="panel">
@@ -376,10 +429,56 @@ export default function LeadsTable({
         </div>
       ) : null}
 
+      {canDelete && selectedIds.length ? (
+        <div className="bulk-bar" role="region" aria-label="Bulk actions">
+          <div className="bulk-bar-count">
+            <strong>{selectedIds.length}</strong>
+            <span>selected</span>
+          </div>
+          <div className="bulk-bar-groups">
+            <div className="bulk-group">
+              <button
+                type="button"
+                className="btn btn-secondary bulk-btn"
+                onClick={clearSelection}
+                disabled={bulkBusy}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="bulk-divider" aria-hidden />
+            <div className="bulk-group bulk-group-end">
+              <button
+                type="button"
+                className="btn btn-primary bulk-btn"
+                onClick={runBulkDelete}
+                disabled={bulkBusy || !onBulkDelete}
+              >
+                {bulkBusy ? "Deleting…" : "Delete selected"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
+              {canDelete ? (
+                <th className="col-check">
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = somePageSelected;
+                    }}
+                    onChange={togglePage}
+                    aria-label="Select all leads on this page"
+                  />
+                </th>
+              ) : null}
               <th>S.No</th>
               <th>
                 <button type="button" className="th-sort" onClick={() => toggleSort("entity")}>
@@ -426,7 +525,7 @@ export default function LeadsTable({
           <tbody>
             {!pageRows.length ? (
               <tr>
-                <td colSpan={13} className="empty">
+                <td colSpan={colCount} className="empty">
                   <div className="table-empty">
                     <h3>No leads found</h3>
                     <p>Try clearing filters or create a new lead.</p>
@@ -437,7 +536,7 @@ export default function LeadsTable({
               pageRows.map((l, i) => (
                 <tr
                   key={l.id}
-                  className="leads-click-row"
+                  className={`leads-click-row${selectedIds.includes(l.id) ? " row-selected" : ""}`}
                   tabIndex={0}
                   role="link"
                   onClick={() => onView(l.id)}
@@ -448,6 +547,21 @@ export default function LeadsTable({
                     }
                   }}
                 >
+                  {canDelete ? (
+                    <td
+                      className="col-check"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox"
+                        checked={selectedIds.includes(l.id)}
+                        onChange={() => toggleRow(l.id)}
+                        aria-label={`Select ${l.entity}`}
+                      />
+                    </td>
+                  ) : null}
                   <td>{start + i}</td>
                   <td>{l.entity}</td>
                   <td>{l.contact}</td>

@@ -59,11 +59,13 @@ function LeadsListInner() {
   const {
     leads,
     deleteLead,
+    bulkDelete,
   } = useLeads();
   const { user } = useAuth();
   const canCreate = hasPermission(user?.permissions, "leads.create");
   const [globalSearch, setGlobalSearch] = useState("");
   const [tableSearch, setTableSearch] = useState("");
+  const [bulkError, setBulkError] = useState("");
 
   const initialFilters = useMemo(
     () => ({
@@ -113,6 +115,8 @@ function LeadsListInner() {
           }
         />
 
+        {bulkError ? <div className="cal-flash err">{bulkError}</div> : null}
+
         <LeadsTable
           key={searchParams.toString()}
           leads={filtered}
@@ -123,6 +127,17 @@ function LeadsListInner() {
           onEdit={(id) => router.push(`/leads/${id}/edit`)}
           onDelete={(id) => {
             if (confirm("Delete this lead?")) deleteLead(id);
+          }}
+          onBulkDelete={async (ids) => {
+            setBulkError("");
+            try {
+              await bulkDelete(ids);
+            } catch (err) {
+              setBulkError(
+                err instanceof Error ? err.message : "Could not delete selected leads",
+              );
+              throw err;
+            }
           }}
           onExport={() => exportLeadsCsv(filtered, "leads.csv")}
         />
