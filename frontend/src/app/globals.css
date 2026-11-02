@@ -5865,6 +5865,41 @@ table.dash-mini-table tbody tr.dash-click-row:focus-visible,
   font-weight: 600;
 }
 
+.login-password-wrap {
+  position: relative;
+}
+
+.login-password-wrap .input {
+  padding-right: 44px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.login-password-toggle:hover {
+  color: var(--navy);
+  background: #f1f5f9;
+}
+
+.login-password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
 .login-submit {
   width: 100% !important;
   margin-top: 8px;
