@@ -15,7 +15,7 @@ export default function ImportLeadsPageClient() {
         showSearch={false}
       />
 
-      <section className="content">
+      <section className="content import-leads-page">
         <PageHeader
           title="Import Leads"
           subtitle="Upload CSV or Excel — preview, then import to the pipeline."
@@ -35,7 +35,7 @@ export default function ImportLeadsPageClient() {
           }
         />
 
-        <div className="panel">
+        <div className="panel import-leads-panel">
           <ImportLeads />
         </div>
       </section>

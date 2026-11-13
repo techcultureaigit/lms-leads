@@ -1431,15 +1431,24 @@ textarea.input:focus {
   filter: brightness(1.03);
 }
 
+.import-leads-page .import-leads-panel {
+  width: 100%;
+  max-width: none;
+}
+
 .import-panel {
-  padding: 32px 28px 28px;
+  padding: 24px 22px 22px;
   text-align: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .import-panel-live {
   text-align: left;
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .import-panel h3 {
