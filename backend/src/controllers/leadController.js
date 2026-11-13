@@ -86,11 +86,32 @@ export const getLead = asyncHandler(async (req, res) => {
   res.json({ lead: toLeadDto(lead) });
 });
 
+function normalizePhoneValue(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.round(value));
+  }
+  const raw = String(value).trim();
+  const cleaned = raw
+    .replace(/[^\d-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const digits = cleaned.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) {
+    return digits.slice(2);
+  }
+  if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1))) {
+    return digits.slice(1);
+  }
+  return cleaned || digits;
+}
+
 export const createLead = asyncHandler(async (req, res) => {
   const body = req.body || {};
-  if (!body.entity || !body.mobile || !body.owner || !body.assigned) {
+  const mobile = normalizePhoneValue(body.mobile);
+  if (!body.entity || !mobile || !body.owner || !body.assigned) {
     return res.status(400).json({
-      message: "entity, mobile, owner, assigned are required",
+      message: "entity, mobile/telephone, owner, assigned are required",
     });
   }
   if (!body.leadSource) {
@@ -118,7 +139,7 @@ export const createLead = asyncHandler(async (req, res) => {
   let lead = await Lead.create({
     entity: body.entity,
     contact: body.contact || "",
-    mobile: body.mobile,
+    mobile,
     email: body.email || "",
     location: body.location || "",
     website: body.website || "",
@@ -193,7 +214,10 @@ export const updateLead = asyncHandler(async (req, res) => {
   Object.assign(leadDoc, {
     entity: body.entity ?? leadDoc.entity,
     contact: body.contact ?? leadDoc.contact,
-    mobile: body.mobile ?? leadDoc.mobile,
+    mobile:
+      body.mobile !== undefined
+        ? normalizePhoneValue(body.mobile) || leadDoc.mobile
+        : leadDoc.mobile,
     email: body.email ?? leadDoc.email,
     location: body.location ?? leadDoc.location,
     website: body.website ?? leadDoc.website,
@@ -374,26 +398,18 @@ export const importLeads = asyncHandler(async (req, res) => {
   const created = [];
   const errors = [];
 
-  function normalizeMobile(value) {
-    let digits = String(value ?? "").replace(/\D/g, "");
-    if (digits.length >= 12 && digits.startsWith("91")) digits = digits.slice(-10);
-    else if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-    else if (digits.length > 10) digits = digits.slice(-10);
-    return digits;
-  }
-
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i] || {};
     const rowNum = i + 2; // header is row 1
     try {
       const entity = String(row.entity || "").trim();
       const contact = String(row.contact || row.entity || "").trim();
-      const mobile = normalizeMobile(row.mobile);
+      const mobile = normalizePhoneValue(row.mobile) || "—";
 
-      if (!entity || !contact || mobile.length < 10) {
+      if (!entity || !contact) {
         errors.push({
           row: rowNum,
-          message: `Need entity, contact and 10-digit mobile (got entity="${entity || "-"}", contact="${contact || "-"}", mobile="${mobile || "-"}")`,
+          message: `Need entity and contact (got entity="${entity || "-"}", contact="${contact || "-"}", mobile="${mobile || "-"}")`,
         });
         continue;
       }

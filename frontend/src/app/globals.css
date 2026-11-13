@@ -933,22 +933,22 @@ button {
 .content.leads-page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--topbar-h));
   padding-bottom: 24px;
 }
 
 .content.leads-page .panel {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - var(--topbar-h) - 120px);
   margin-bottom: 0;
 }
 
-.content.leads-page .panel > .table-wrap,
+.content.leads-page .panel > .table-wrap {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
 .content.leads-page .panel > .table-empty {
-  flex: 1;
-  min-height: 420px;
+  min-height: 180px;
 }
 
 /* ——— Surfaces ——— */
@@ -1240,6 +1240,27 @@ textarea.input:focus {
 
 .phone {
   display: flex;
+}
+
+.mobile-redline {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.phone-telephone {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field-hint.warn {
+  color: #b91c1c;
 }
 
 .phone-prefix {
@@ -1970,6 +1991,29 @@ tbody tr:hover {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px 14px;
+  align-items: end;
+}
+
+.leads-filter-grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.leads-filter-grid .field > label:first-child {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.leads-filter-grid .field select,
+.leads-filter-grid .field .input,
+.leads-filter-grid .check-control {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
 }
 
 .leads-filter-actions {
@@ -1991,6 +2035,19 @@ tbody tr:hover {
   font-weight: 600;
   color: #506279;
   cursor: pointer;
+}
+
+.check-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .bulk-bar {
@@ -6827,9 +6884,12 @@ textarea,
     height: 32px;
   }
 
-  .content.leads-page .panel > .table-wrap,
+  .content.leads-page .panel > .table-wrap {
+    min-height: 0;
+  }
+
   .content.leads-page .panel > .table-empty {
-    min-height: 280px;
+    min-height: 140px;
   }
 
   .leads-page table,

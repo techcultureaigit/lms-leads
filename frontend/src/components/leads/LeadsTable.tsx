@@ -12,6 +12,12 @@ import { DEMO_TODAY } from "@/lib/demoDate";
 import { formatDate, statusClass } from "@/lib/format";
 import { LEAD_STATUSES, PRODUCTS } from "@/lib/constants";
 import { applySavedFilter } from "@/lib/leadFilters";
+import {
+  isTelephone,
+  isValidMobile,
+  matchesPhoneType,
+  type PhoneTypeFilter,
+} from "@/lib/mobile";
 import type {
   FilterCondition,
   FilterJoin,
@@ -98,6 +104,7 @@ export default function LeadsTable({
   const [overdueOnly, setOverdueOnly] = useState(
     Boolean(initialFilters?.overdue),
   );
+  const [phoneType, setPhoneType] = useState<PhoneTypeFilter>("");
   const [advancedConditions, setAdvancedConditions] = useState<
     FilterCondition[]
   >([]);
@@ -133,6 +140,7 @@ export default function LeadsTable({
   const activeFilterCount =
     Object.values(filters).filter(Boolean).length +
     (overdueOnly ? 1 : 0) +
+    (phoneType ? 1 : 0) +
     (advancedConditions.length ? 1 : 0);
 
   const filtered = useMemo(() => {
@@ -161,6 +169,9 @@ export default function LeadsTable({
     if (overdueOnly) {
       rows = rows.filter((l) => l.followup && l.followup < DEMO_TODAY);
     }
+    if (phoneType) {
+      rows = rows.filter((l) => matchesPhoneType(l.mobile, phoneType));
+    }
 
     if (advancedConditions.length) {
       rows = applySavedFilter(rows, advancedConditions, advancedJoins);
@@ -178,6 +189,7 @@ export default function LeadsTable({
     leads,
     filters,
     overdueOnly,
+    phoneType,
     advancedConditions,
     advancedJoins,
     sortKey,
@@ -305,7 +317,7 @@ export default function LeadsTable({
             className={`toolbar-btn ${showFilters ? "active" : ""}`}
             onClick={() => setShowFilters((v) => !v)}
           >
-            Quick filter{Object.values(filters).filter(Boolean).length || overdueOnly ? " •" : ""}
+            Quick filter{Object.values(filters).filter(Boolean).length || overdueOnly || phoneType ? " •" : ""}
           </button>
           <button type="button" className="toolbar-btn" onClick={onExport}>
             Export
@@ -402,15 +414,27 @@ export default function LeadsTable({
                 }
               />
             </div>
-            <div className="field field-check">
-              <label className="check-label">
+            <div className="field">
+              <label>Phone type</label>
+              <select
+                value={phoneType}
+                onChange={(e) => setPhoneType(e.target.value as PhoneTypeFilter)}
+              >
+                <option value="">All (Mobile + Telephone)</option>
+                <option value="mobile">Mobile No only</option>
+                <option value="telephone">Telephone No only</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Follow-up flag</label>
+              <label className="check-label check-control">
                 <input
                   type="checkbox"
                   className="checkbox"
                   checked={overdueOnly}
                   onChange={(e) => setOverdueOnly(e.target.checked)}
                 />
-                Overdue follow-ups only
+                Overdue only
               </label>
             </div>
           </div>
@@ -421,6 +445,7 @@ export default function LeadsTable({
               onClick={() => {
                 setFilters(EMPTY_FILTERS);
                 setOverdueOnly(false);
+                setPhoneType("");
               }}
             >
               Clear Filters
@@ -565,7 +590,26 @@ export default function LeadsTable({
                   <td>{start + i}</td>
                   <td>{l.entity}</td>
                   <td>{l.contact}</td>
-                  <td>{l.mobile}</td>
+                  <td>
+                    <span
+                      className={
+                        isValidMobile(l.mobile)
+                          ? undefined
+                          : isTelephone(l.mobile)
+                            ? "phone-telephone"
+                            : "mobile-redline"
+                      }
+                      title={
+                        isValidMobile(l.mobile)
+                          ? "Mobile"
+                          : isTelephone(l.mobile)
+                            ? "Telephone"
+                            : "Missing number"
+                      }
+                    >
+                      {l.mobile || "—"}
+                    </span>
+                  </td>
                   <td>{l.email || "—"}</td>
                   <td>{l.location || "—"}</td>
                   <td>

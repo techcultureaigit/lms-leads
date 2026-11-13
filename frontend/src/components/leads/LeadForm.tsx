@@ -311,21 +311,31 @@ export default function LeadForm({
         return (
           <>
             <label>
-              Mobile No <span className="required">*</span>
+              Mobile / Telephone No <span className="required">*</span>
             </label>
             <div className="phone">
               <span className="phone-prefix">+91</span>
               <input
                 className="input"
                 required
-                maxLength={10}
+                maxLength={20}
                 value={form.mobile}
                 onChange={(e) =>
-                  set("mobile", e.target.value.replace(/\D/g, "").slice(0, 10))
+                  set(
+                    "mobile",
+                    e.target.value.replace(/[^\d-]/g, "").replace(/-+/g, "-").slice(0, 20),
+                  )
                 }
-                placeholder="Enter mobile number"
+                placeholder="Mobile or telephone e.g. 9876543210 / 012345-2721727"
               />
             </div>
+            {form.mobile &&
+            !(form.mobile.replace(/\D/g, "").length === 10 &&
+              /^[6-9]/.test(form.mobile.replace(/\D/g, ""))) ? (
+              <p className="field-hint">
+                Saved as telephone number (not a 10-digit mobile).
+              </p>
+            ) : null}
           </>
         );
       case "notes":

@@ -55,7 +55,13 @@ const FIELD_ALIASES: Record<FieldKey, string[]> = {
     "phone no",
     "phone number",
     "phone",
+    "telephone no",
+    "telephone number",
     "telephone",
+    "landline",
+    "land line",
+    "landline no",
+    "std no",
     "tel no",
     "tel",
     "cell",
@@ -187,26 +193,28 @@ function cellStr(v: unknown): string {
   return String(v).trim();
 }
 
-/** Pull first 10-digit Indian-style mobile from a value */
+/** Pull phone value — keeps landline / telephone numbers longer than 10 digits. */
 function extractMobile(v: unknown): string {
-  let raw = "";
   if (typeof v === "number" && Number.isFinite(v)) {
-    raw = String(Math.round(v));
-  } else {
-    raw = cellStr(v);
+    return String(Math.round(v));
   }
-  // keep digits only
-  let digits = raw.replace(/\D/g, "");
-  // strip leading 91 / 0
-  if (digits.length >= 12 && digits.startsWith("91")) {
-    digits = digits.slice(-10);
-  } else if (digits.length === 11 && digits.startsWith("0")) {
-    digits = digits.slice(1);
-  } else if (digits.length > 10) {
-    digits = digits.slice(-10);
+  const raw = cellStr(v).trim();
+  if (!raw) return "";
+
+  const cleaned = raw
+    .replace(/[^\d-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const digits = cleaned.replace(/\D/g, "");
+
+  if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) {
+    return digits.slice(2);
   }
-  if (digits.length === 10) return digits;
-  return "";
+  if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1))) {
+    return digits.slice(1);
+  }
+
+  return cleaned || digits;
 }
 
 function parseProducts(raw: string): string[] {
@@ -434,7 +442,7 @@ export async function parseLeadImportFile(
   // Mobile fallback by header keywords
   if (colIndex.mobile === undefined) {
     const mobIdx = headerCells.findIndex((h) =>
-      /mobile|phone|telephone|whatsapp|tel|cell|\bmob\b|\bph\b/.test(h),
+      /mobile|phone|telephone|land\s*line|whatsapp|tel|cell|\bmob\b|\bph\b/.test(h),
     );
     if (mobIdx >= 0) {
       colIndex.mobile = mobIdx;

@@ -36,12 +36,7 @@ export default function ImportLeads() {
   const preview = useMemo(() => rows.slice(0, 8), [rows]);
   const invalidCount = useMemo(
     () =>
-      rows.filter(
-        (r) =>
-          !r.entity?.trim() ||
-          !r.contact?.trim() ||
-          String(r.mobile || "").replace(/\D/g, "").length < 10,
-      ).length,
+      rows.filter((r) => !r.entity?.trim() || !r.contact?.trim()).length,
     [rows],
   );
 
@@ -68,16 +63,18 @@ export default function ImportLeads() {
       setRows(parsed.rows);
       setHeaderRow(parsed.headerRow);
 
-      const badMobile = parsed.rows.filter(
-        (r) => String(r.mobile || "").replace(/\D/g, "").length < 10,
-      ).length;
-      if (!parsed.mapped.mobile && badMobile > 0) {
+      const telephoneCount = parsed.rows.filter((r) => {
+        const digits = String(r.mobile || "").replace(/\D/g, "");
+        if (!digits) return false;
+        return !(digits.length === 10 && /^[6-9]/.test(digits));
+      }).length;
+      if (!parsed.mapped.mobile) {
         setError(
-          `Mobile column not clearly detected. Headers: ${parsed.headers.join(", ")}. ${badMobile} rows missing 10-digit mobile.`,
+          `Phone column not clearly detected. Headers: ${parsed.headers.join(", ")}.`,
         );
-      } else if (badMobile > 0) {
+      } else if (telephoneCount > 0) {
         setError(
-          `${badMobile} of ${parsed.rows.length} rows have invalid/missing 10-digit mobile — those will fail on import.`,
+          `${telephoneCount} of ${parsed.rows.length} rows have telephone / landline numbers (not 10-digit mobile) — they will still import.`,
         );
       }
     } catch (e) {
@@ -125,7 +122,8 @@ export default function ImportLeads() {
       <h3>Import Leads</h3>
       <p>
         Upload a CSV or Excel (`.xlsx`) file. Columns like Entity/Company,
-        Contact, Mobile, Email, Location are auto-detected.
+        Contact, Mobile/Telephone, Email, Location are auto-detected. Landline
+        numbers (e.g. 012345-2721727) are allowed.
       </p>
 
       <div className="import-actions-top">

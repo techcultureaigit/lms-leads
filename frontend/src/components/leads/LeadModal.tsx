@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
+import { isTelephone, isValidMobile } from "@/lib/mobile";
 import { useLeads } from "@/context/LeadsContext";
 import LeadActivityTimeline from "@/components/leads/LeadActivityTimeline";
 import type { Lead } from "@/types/lead";
@@ -52,8 +53,10 @@ export default function LeadModal({ lead, onClose }: LeadModalProps) {
                 <p>{lead.contact}</p>
               </div>
               <div>
-                <b>Mobile No</b>
-                <p>+91 {lead.mobile}</p>
+                <b>{isTelephone(lead.mobile) ? "Telephone No" : "Mobile No"}</b>
+                <p className={isTelephone(lead.mobile) ? "phone-telephone" : undefined}>
+                  {isValidMobile(lead.mobile) ? `+91 ${lead.mobile}` : lead.mobile || "—"}
+                </p>
               </div>
               <div>
                 <b>Email Id</b>
