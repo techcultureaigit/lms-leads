@@ -1459,6 +1459,14 @@ textarea.input:focus {
   margin-bottom: 14px;
 }
 
+.import-actions-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  align-items: center;
+}
+
 .import-drop {
   max-width: none;
   margin: 0 0 16px;

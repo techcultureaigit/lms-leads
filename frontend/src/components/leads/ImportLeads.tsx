@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLeads } from "@/context/LeadsContext";
@@ -23,6 +23,7 @@ export default function ImportLeads() {
   const router = useRouter();
   const { user } = useAuth();
   const { refreshLeads } = useLeads();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<ImportLeadRow[]>([]);
@@ -39,6 +40,17 @@ export default function ImportLeads() {
       rows.filter((r) => !r.entity?.trim() || !r.contact?.trim()).length,
     [rows],
   );
+
+  const resetImport = () => {
+    setError("");
+    setResult(null);
+    setRows([]);
+    setMapped({});
+    setHeaders([]);
+    setHeaderRow(1);
+    setFileName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const onFile = async (file: File | null) => {
     setError("");
@@ -62,21 +74,6 @@ export default function ImportLeads() {
       setMapped(parsed.mapped as Record<string, string>);
       setRows(parsed.rows);
       setHeaderRow(parsed.headerRow);
-
-      const telephoneCount = parsed.rows.filter((r) => {
-        const digits = String(r.mobile || "").replace(/\D/g, "");
-        if (!digits) return false;
-        return !(digits.length === 10 && /^[6-9]/.test(digits));
-      }).length;
-      if (!parsed.mapped.mobile) {
-        setError(
-          `Phone column not clearly detected. Headers: ${parsed.headers.join(", ")}.`,
-        );
-      } else if (telephoneCount > 0) {
-        setError(
-          `${telephoneCount} of ${parsed.rows.length} rows have telephone / landline numbers (not 10-digit mobile) — they will still import.`,
-        );
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to read file");
     }
@@ -138,6 +135,7 @@ export default function ImportLeads() {
 
       <div className="import-drop">
         <input
+          ref={fileInputRef}
           type="file"
           accept=".csv,.xlsx,.xls"
           onChange={(e) => onFile(e.target.files?.[0] || null)}
@@ -224,14 +222,24 @@ export default function ImportLeads() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="btn btn-primary dash-cta"
-        disabled={busy || !rows.length}
-        onClick={handleImport}
-      >
-        {busy ? "Importing…" : "Import Leads"}
-      </button>
+      <div className="import-actions-bottom">
+        <button
+          type="button"
+          className="btn btn-secondary dash-cta"
+          disabled={busy || (!fileName && !rows.length && !error && !result)}
+          onClick={resetImport}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary dash-cta"
+          disabled={busy || !rows.length}
+          onClick={handleImport}
+        >
+          {busy ? "Importing…" : "Import Leads"}
+        </button>
+      </div>
     </div>
   );
 }
