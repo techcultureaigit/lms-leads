@@ -11,7 +11,7 @@ import { useLeads } from "@/context/LeadsContext";
 import { useAuth } from "@/context/AuthContext";
 import { hasPermission } from "@/lib/permissions";
 import { formatDate, statusClass } from "@/lib/format";
-import { isTelephone, isValidMobile } from "@/lib/mobile";
+import { isTelephone } from "@/lib/mobile";
 import type { Lead } from "@/types/lead";
 
 export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
@@ -105,7 +105,7 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
               <div>
                 <b>{isTelephone(lead.mobile) ? "Telephone No" : "Mobile No"}</b>
                 <p className={isTelephone(lead.mobile) ? "phone-telephone" : undefined}>
-                  {isValidMobile(lead.mobile) ? `+91 ${lead.mobile}` : lead.mobile || "—"}
+                  {lead.mobile || "—"}
                 </p>
               </div>
               <div>

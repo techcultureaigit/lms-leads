@@ -313,22 +313,19 @@ export default function LeadForm({
             <label>
               Mobile / Telephone No <span className="required">*</span>
             </label>
-            <div className="phone">
-              <span className="phone-prefix">+91</span>
-              <input
-                className="input"
-                required
-                maxLength={20}
-                value={form.mobile}
-                onChange={(e) =>
-                  set(
-                    "mobile",
-                    e.target.value.replace(/[^\d-]/g, "").replace(/-+/g, "-").slice(0, 20),
-                  )
-                }
-                placeholder="Mobile or telephone e.g. 9876543210 / 012345-2721727"
-              />
-            </div>
+            <input
+              className="input"
+              required
+              maxLength={20}
+              value={form.mobile}
+              onChange={(e) =>
+                set(
+                  "mobile",
+                  e.target.value.replace(/[^\d-]/g, "").replace(/-+/g, "-").slice(0, 20),
+                )
+              }
+              placeholder="e.g. 9876543210 or 012345-2721727"
+            />
             {form.mobile &&
             !(form.mobile.replace(/\D/g, "").length === 10 &&
               /^[6-9]/.test(form.mobile.replace(/\D/g, ""))) ? (
