@@ -398,6 +398,7 @@ export const importLeads = asyncHandler(async (req, res) => {
   const created = [];
   const errors = [];
 
+  // Mobile may be 10-digit or longer telephone/landline (e.g. 000204036, 012345-2721727).
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i] || {};
     const rowNum = i + 2; // header is row 1
