@@ -397,6 +397,20 @@ export const importLeads = asyncHandler(async (req, res) => {
   const defaultOwner = req.user?.name || "Admin";
   const created = [];
   const errors = [];
+  const duplicates = [];
+
+  // Skip leads that already exist (same entity + mobile, or entity + contact when no mobile),
+  // so re-uploading the same sheet does not create duplicate records.
+  const dupKeyOf = (entity, contact, mobile) => {
+    const clean = (v) => String(v || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const phone = mobile && mobile !== "—" ? clean(mobile) : "";
+    return `${clean(entity)}|${phone || `contact:${clean(contact)}`}`;
+  };
+  const existingKeys = new Set(
+    (await Lead.find({}, { entity: 1, contact: 1, mobile: 1 }).lean()).map((l) =>
+      dupKeyOf(l.entity, l.contact, l.mobile),
+    ),
+  );
 
   // Mobile may be 10-digit or longer telephone/landline (e.g. 000204036, 012345-2721727).
   for (let i = 0; i < rows.length; i += 1) {
@@ -414,6 +428,16 @@ export const importLeads = asyncHandler(async (req, res) => {
         });
         continue;
       }
+
+      const dupKey = dupKeyOf(entity, contact, mobile);
+      if (existingKeys.has(dupKey)) {
+        duplicates.push({
+          row: rowNum,
+          message: `Duplicate skipped: "${entity}" (${mobile}) already exists`,
+        });
+        continue;
+      }
+      existingKeys.add(dupKey);
 
       const products = Array.isArray(row.products)
         ? row.products.map((p) => String(p).trim()).filter(Boolean)
@@ -479,7 +503,9 @@ export const importLeads = asyncHandler(async (req, res) => {
   res.status(201).json({
     created: created.length,
     failed: errors.length,
+    skipped: duplicates.length,
     items: created,
     errors: errors.slice(0, 50),
+    duplicates: duplicates.slice(0, 50),
   });
 });

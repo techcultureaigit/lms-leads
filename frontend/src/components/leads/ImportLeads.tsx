@@ -15,6 +15,7 @@ import type { Lead } from "@/types/lead";
 type ImportResult = {
   created: number;
   failed: number;
+  skipped?: number;
   items: Lead[];
   errors: { row: number; message: string }[];
 };
@@ -209,7 +210,8 @@ export default function ImportLeads() {
           style={{ marginTop: 12 }}
         >
           Imported <strong>{result.created}</strong> leads
-          {result.failed ? ` · ${result.failed} failed` : ""}.
+          {result.failed ? ` · ${result.failed} failed` : ""}
+          {result.skipped ? ` · ${result.skipped} duplicates skipped` : ""}.
           {result.errors?.[0] ? (
             <div style={{ marginTop: 6 }}>
               First error (row {result.errors[0].row}):{" "}
