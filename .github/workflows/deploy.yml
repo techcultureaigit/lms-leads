@@ -26,8 +26,10 @@ jobs:
           filters: |
             backend:
               - 'backend/**'
+              - '.github/workflows/deploy.yml'
             admin:
               - 'frontend/**'
+              - '.github/workflows/deploy.yml'
 
   backend:
     needs: detect
@@ -42,9 +44,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            exec 9>/tmp/lms-leads-git.lock
+            flock 9
             cd /var/www/techculture/lms-leads
 
-            git fetch origin
+            git fetch origin || git fetch origin
             git reset --hard origin/main
             git clean -fd
 
@@ -66,9 +70,11 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
+            exec 9>/tmp/lms-leads-git.lock
+            flock 9
             cd /var/www/techculture/lms-leads
 
-            git fetch origin
+            git fetch origin || git fetch origin
             git reset --hard origin/main
             git clean -fd
 
