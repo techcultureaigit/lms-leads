@@ -25,7 +25,7 @@ const emailBatchSchema = new mongoose.Schema(
     html: { type: String, default: "" },
     mode: {
       type: String,
-      enum: ["students", "csv", "manual"],
+      enum: ["students", "leads", "csv", "manual"],
       default: "students",
     },
     status: {

@@ -8,11 +8,13 @@ import {
   getTemplate,
   listBatches,
   listHistory,
+  listLeadRecipients,
   listStudentRecipients,
   listTemplates,
   resendBatch,
   sendExternal,
   sendStatus,
+  sendToLeads,
   sendToStudents,
   stopBatch,
   updateTemplate,
@@ -31,6 +33,11 @@ router.get(
   requirePermission("email.send"),
   listStudentRecipients,
 );
+router.get(
+  "/leads/list",
+  requirePermission("email.send"),
+  listLeadRecipients,
+);
 router.post(
   "/upload-image",
   requirePermission("email.create"),
@@ -38,6 +45,7 @@ router.post(
   uploadImage,
 );
 router.post("/send", requirePermission("email.send"), sendToStudents);
+router.post("/send-leads", requirePermission("email.send"), sendToLeads);
 router.get("/send/status/:jobId", requirePermission("email.send"), sendStatus);
 router.post("/send-external", requirePermission("email.send"), sendExternal);
 router.get(

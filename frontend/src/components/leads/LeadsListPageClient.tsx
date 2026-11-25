@@ -10,6 +10,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
 import { useAuth } from "@/context/AuthContext";
 import { hasPermission } from "@/lib/permissions";
+import { queueLeadEmail } from "@/lib/leadEmail";
 import type { Lead } from "@/types/lead";
 
 function exportLeadsCsv(rows: Lead[], filename: string) {
@@ -140,6 +141,27 @@ function LeadsListInner() {
             }
           }}
           onExport={() => exportLeadsCsv(filtered, "leads.csv")}
+          onSendEmail={(ids) => {
+            const chosen = leads.filter(
+              (lead) => ids.includes(lead.id) && lead.email.includes("@"),
+            );
+            const skipped = ids.length - chosen.length;
+            if (!chosen.length) {
+              setBulkError("Selected leads do not have an email address.");
+              return;
+            }
+            if (
+              skipped > 0 &&
+              !confirm(
+                `${skipped} selected lead${skipped === 1 ? "" : "s"} have no email and will be skipped. Continue with ${chosen.length}?`,
+              )
+            ) {
+              return;
+            }
+            setBulkError("");
+            queueLeadEmail(chosen.map((lead) => lead.id));
+            router.push("/email/send?audience=leads");
+          }}
         />
       </section>
     </AppShell>

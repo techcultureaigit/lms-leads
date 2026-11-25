@@ -32,6 +32,7 @@ export default function EmailTemplateViewPageClient() {
   const canEdit = hasPermission(user?.permissions, "email.create");
   const [template, setTemplate] = useState<Template | null>(null);
   const [error, setError] = useState("");
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
 
   useEffect(() => {
     if (!id) return;
@@ -71,9 +72,15 @@ export default function EmailTemplateViewPageClient() {
               <div><span>Created</span><strong>{template.createdAt ? new Date(template.createdAt).toLocaleString() : "—"}</strong></div>
             </div>
             {template.description ? <p className="email-view-desc">{template.description}</p> : null}
-            <div className="settings-panel">
-              <div className="settings-panel-head"><h2>Preview</h2></div>
-              <div className="settings-body">
+            <div className="settings-panel email-view-card">
+              <div className="settings-panel-head email-view-head">
+                <h2>Email preview</h2>
+                <div className="email-toolbar">
+                  <button type="button" className={device === "desktop" ? "active" : ""} onClick={() => setDevice("desktop")}>Desktop</button>
+                  <button type="button" className={device === "mobile" ? "active" : ""} onClick={() => setDevice("mobile")}>Mobile</button>
+                </div>
+              </div>
+              <div className={`email-view-frame ${device === "mobile" ? "is-mobile" : ""}`}>
                 <iframe title="Email preview" className="email-preview" srcDoc={template.html || "<p>No content</p>"} />
               </div>
             </div>

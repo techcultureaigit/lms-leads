@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
-import { api, ApiError, getToken } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import {
   BLOCK_PALETTE,
-  EMAIL_VARIABLES,
   EmailBlock,
   EmailBlockType,
+  blockInnerHtml,
+  emailBodyHtml,
+  htmlToPlainText,
   newBlock,
   renderEmailHtml,
-  renderEmailText,
+  wrapEmailDocument,
 } from "@/lib/emailBlocks";
 
 type TemplatePayload = {
@@ -36,29 +38,26 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("general");
   const [blocks, setBlocks] = useState<EmailBlock[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [mode, setMode] = useState<"desktop" | "mobile" | "preview">("desktop");
+  const [isActive, setIsActive] = useState(true);
+  const [preview, setPreview] = useState<"desktop" | "mobile">("desktop");
+  const [panel, setPanel] = useState<"preview" | "html">("preview");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(Boolean(templateId));
   const [htmlCode, setHtmlCode] = useState(() => renderEmailHtml([]));
-  const keepLoadedHtml = useRef(false);
-
-  useEffect(() => {
-    if (keepLoadedHtml.current) return;
-    setHtmlCode(renderEmailHtml(blocks));
-  }, [blocks]);
+  const previewRef = useRef<HTMLIFrameElement>(null);
+  const skipPreviewWrite = useRef(false);
 
   useEffect(() => {
     if (!templateId) return;
     api<{ template: TemplatePayload & { id: string } }>(`/api/email-templates/${templateId}`)
       .then((res) => {
         const nextBlocks = res.template.design?.blocks || [];
-        keepLoadedHtml.current = true;
         setName(res.template.name);
         setSubject(res.template.subject);
         setDescription(res.template.description || "");
         setCategory(res.template.category || "general");
+        setIsActive(res.template.isActive !== false);
         setBlocks(nextBlocks);
         setHtmlCode(res.template.html || renderEmailHtml(nextBlocks));
       })
@@ -68,34 +67,38 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
       .finally(() => setLoading(false));
   }, [templateId]);
 
-  const selected = blocks.find((block) => block.id === selectedId);
-
-  const addBlock = (type: EmailBlockType) => {
-    keepLoadedHtml.current = false;
-    const block = newBlock(type);
-    setBlocks((prev) => [...prev, block]);
-    setSelectedId(block.id);
-    setMode("desktop");
-  };
-
-  const updateSelected = (key: string, value: string) => {
-    keepLoadedHtml.current = false;
-    setBlocks((prev) =>
-      prev.map((block) =>
-        block.id === selectedId
-          ? { ...block, props: { ...block.props, [key]: value } }
-          : block,
-      ),
-    );
-  };
-
-  const insertVariable = (token: string) => {
-    const snippet = `{{${token}}}`;
-    if (selected && (selected.props.text !== undefined || selected.type === "paragraph" || selected.type === "heading" || selected.type === "header" || selected.type === "footer")) {
-      updateSelected("text", `${selected.props.text || ""}${snippet}`);
+  useEffect(() => {
+    if (skipPreviewWrite.current) {
+      skipPreviewWrite.current = false;
       return;
     }
-    setSubject((prev) => `${prev}${snippet}`);
+    const timer = window.setTimeout(() => {
+      const frame = previewRef.current;
+      const doc = frame?.contentDocument;
+      if (!frame || !doc) return;
+      const scroll = doc.scrollingElement?.scrollTop || 0;
+      doc.open();
+      doc.write(htmlCode || "<p>No HTML yet</p>");
+      doc.close();
+      const live = frame.contentDocument;
+      if (!live?.body) return;
+      if (live.scrollingElement) live.scrollingElement.scrollTop = scroll;
+      live.body.contentEditable = "true";
+      live.body.spellcheck = false;
+      live.body.addEventListener("input", () => {
+        const root = live.documentElement.cloneNode(true) as HTMLElement;
+        root.querySelectorAll("[contenteditable]").forEach((node) => node.removeAttribute("contenteditable"));
+        skipPreviewWrite.current = true;
+        setHtmlCode(`<!DOCTYPE html>\n${root.outerHTML}`);
+      });
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [htmlCode, preview]);
+
+  const addBlock = (type: EmailBlockType) => {
+    const block = newBlock(type);
+    setBlocks((prev) => [...prev, block]);
+    setHtmlCode((prev) => wrapEmailDocument(`${emailBodyHtml(prev)}${blockInnerHtml(block)}`));
   };
 
   const save = async () => {
@@ -112,8 +115,8 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
       category,
       design: { blocks },
       html: htmlCode.trim() ? htmlCode : renderEmailHtml(blocks),
-      text: renderEmailText(blocks),
-      isActive: true,
+      text: htmlToPlainText(htmlCode),
+      isActive,
     };
     try {
       if (templateId) {
@@ -128,27 +131,13 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
     }
   };
 
-  const uploadImage = async (file: File) => {
-    const body = new FormData();
-    body.append("image", file);
-    const token = getToken();
-    const res = await fetch("/api/email-templates/upload-image", {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "Upload failed");
-    return (data.path || data.url) as string;
-  };
-
   return (
     <AppShell>
       <Topbar title={templateId ? "Edit email template" : "Create email template"} showSearch={false} />
       <section className="content email-page">
         <PageHeader
           title={templateId ? "Edit email template" : "Create email template"}
-          subtitle="Design the email, then save the layout and HTML."
+          subtitle="Preview opens first. Open HTML code only when you want to edit the source."
           crumbs={[
             { label: "Email Templates", href: "/email/templates" },
             { label: templateId ? "Edit" : "Create" },
@@ -174,7 +163,14 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
           </label>
           <label>
             Email subject <span className="required">*</span>
-            <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Welcome to {{courseName}}" />
+            <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. KYC reminder" />
+          </label>
+          <label>
+            Status
+            <select value={isActive ? "active" : "inactive"} onChange={(e) => setIsActive(e.target.value === "active")}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
           </label>
           <label>
             Category
@@ -184,98 +180,30 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
               ))}
             </select>
           </label>
-          <label>
+          <label className="email-meta-wide">
             Description
             <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description" />
           </label>
         </div>
 
         <div className="email-toolbar">
-          <button type="button" className={mode === "desktop" ? "active" : ""} onClick={() => setMode("desktop")}>Desktop</button>
-          <button type="button" className={mode === "mobile" ? "active" : ""} onClick={() => setMode("mobile")}>Mobile</button>
-          <button type="button" className={mode === "preview" ? "active" : ""} onClick={() => setMode("preview")}>Preview</button>
-          <button type="button" className="danger" onClick={() => { keepLoadedHtml.current = false; setBlocks([]); setSelectedId(""); }}>Reset</button>
+          <button type="button" className={panel === "preview" ? "active" : ""} onClick={() => setPanel("preview")}>Preview</button>
+          <button type="button" className={panel === "html" ? "active" : ""} onClick={() => setPanel("html")}>HTML code</button>
+          <button type="button" className={preview === "desktop" ? "active" : ""} onClick={() => setPreview("desktop")}>Desktop</button>
+          <button type="button" className={preview === "mobile" ? "active" : ""} onClick={() => setPreview("mobile")}>Mobile</button>
+          <button
+            type="button"
+            className="danger"
+            onClick={() => {
+              setBlocks([]);
+              setHtmlCode(renderEmailHtml([]));
+            }}
+          >
+            Reset
+          </button>
         </div>
 
         <div className="email-studio">
-          <div className={`email-canvas ${mode === "mobile" ? "is-mobile" : ""}`}>
-            {mode === "preview" ? (
-              <iframe title="Email preview" className="email-preview" srcDoc={renderEmailHtml(blocks)} />
-            ) : (
-              <div
-                className="email-drop"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const type = e.dataTransfer.getData("block-type") as EmailBlockType;
-                  if (type) addBlock(type);
-                }}
-              >
-                {!blocks.length ? (
-                  <div className="email-empty">
-                    <strong>No content here</strong>
-                    <p>Drag a block from the right panel to start the email.</p>
-                  </div>
-                ) : (
-                  blocks.map((block) => (
-                    <button
-                      type="button"
-                      key={block.id}
-                      className={`email-canvas-block ${selectedId === block.id ? "is-selected" : ""}`}
-                      onClick={() => setSelectedId(block.id)}
-                    >
-                      <small>{block.type}</small>
-                      <span>{block.props.text || block.props.left || block.props.links || block.props.alt || "Block"}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-            {selected && mode !== "preview" ? (
-              <div className="email-block-editor">
-                <div className="email-block-editor-head">
-                  <strong>Edit {selected.type}</strong>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      keepLoadedHtml.current = false;
-                      setBlocks((prev) => prev.filter((block) => block.id !== selected.id));
-                      setSelectedId("");
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-                {Object.keys(selected.props).map((key) => (
-                  <label key={key}>
-                    {key}
-                    {key === "text" || key === "html" || key === "left" || key === "right" ? (
-                      <textarea value={selected.props[key]} onChange={(e) => updateSelected(key, e.target.value)} />
-                    ) : (
-                      <input className="input" value={selected.props[key]} onChange={(e) => updateSelected(key, e.target.value)} />
-                    )}
-                  </label>
-                ))}
-                {(selected.type === "image" || selected.type === "logo") ? (
-                  <label className="email-upload">
-                    Upload image
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/gif,image/webp"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        uploadImage(file)
-                          .then((src) => updateSelected("src", src))
-                          .catch((err) => setError(err instanceof Error ? err.message : "Upload failed"));
-                      }}
-                    />
-                  </label>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
           <aside className="email-palette">
             <h3>Content blocks</h3>
             <div className="email-palette-grid">
@@ -291,29 +219,25 @@ export default function EmailTemplateEditor({ templateId }: { templateId?: strin
                 </button>
               ))}
             </div>
-            <h3>Variables</h3>
-            <div className="email-vars">
-              {EMAIL_VARIABLES.map((token) => (
-                <button type="button" key={token} onClick={() => insertVariable(token)}>
-                  {`{{${token}}}`}
-                </button>
-              ))}
-            </div>
           </aside>
+          <div className={`email-split ${panel === "preview" ? "is-preview-only" : ""}`}>
+            {panel === "html" ? (
+            <label className="email-source-wrap">
+              <span>HTML code</span>
+              <textarea
+                className="email-html-input email-source"
+                spellCheck={false}
+                value={htmlCode}
+                onChange={(e) => setHtmlCode(e.target.value)}
+              />
+            </label>
+            ) : null}
+            <div className={`email-preview-pane ${preview === "mobile" ? "is-mobile" : ""}`}>
+              <span>Preview — click the paragraph and type</span>
+              <iframe ref={previewRef} title="Email preview" className="email-preview" />
+            </div>
+          </div>
         </div>
-
-        <label className="email-html-code">
-          <span>HTML code</span>
-          <textarea
-            className="email-html-input"
-            spellCheck={false}
-            value={htmlCode}
-            onChange={(e) => {
-              keepLoadedHtml.current = true;
-              setHtmlCode(e.target.value);
-            }}
-          />
-        </label>
       </section>
     </AppShell>
   );

@@ -53,6 +53,7 @@ type LeadsTableProps = {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onBulkDelete?: (ids: string[]) => Promise<void> | void;
+  onSendEmail?: (ids: string[]) => void;
   onExport: () => void;
 };
 
@@ -74,6 +75,7 @@ export default function LeadsTable({
   onEdit,
   onDelete,
   onBulkDelete,
+  onSendEmail,
   onExport,
 }: LeadsTableProps) {
   const { user } = useAuth();
@@ -81,6 +83,8 @@ export default function LeadsTable({
   const { userNames } = useUsers();
   const canEdit = hasPermission(user?.permissions, "leads.edit");
   const canDelete = hasPermission(user?.permissions, "leads.delete");
+  const canSend = hasPermission(user?.permissions, "email.send") && Boolean(onSendEmail);
+  const canSelect = canDelete || canSend;
   const canUsePrivate = user?.role === "Admin";
   const seed: Filters = {
     ...EMPTY_FILTERS,
@@ -120,7 +124,7 @@ export default function LeadsTable({
   const [sortKey, setSortKey] = useState<SortKey>("entity");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(25);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -217,10 +221,14 @@ export default function LeadsTable({
   }, [filtered]);
 
   const pageIds = pageRows.map((lead) => lead.id);
+  const filteredIds = filtered.map((lead) => lead.id);
   const allPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
   const somePageSelected =
     pageIds.some((id) => selectedIds.includes(id)) && !allPageSelected;
+  const allFilteredSelected =
+    filteredIds.length > 0 &&
+    filteredIds.every((id) => selectedIds.includes(id));
 
   const toggleRow = (id: string) => {
     setSelectedIds((prev) =>
@@ -240,6 +248,8 @@ export default function LeadsTable({
   };
 
   const clearSelection = () => setSelectedIds([]);
+
+  const selectAllFiltered = () => setSelectedIds(filteredIds);
 
   const runBulkDelete = async () => {
     if (!canDelete || !onBulkDelete || !selectedIds.length || bulkBusy) return;
@@ -273,7 +283,7 @@ export default function LeadsTable({
 
   const start = filtered.length ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(page * pageSize, filtered.length);
-  const colCount = canDelete ? 14 : 13;
+  const colCount = canSelect ? 14 : 13;
 
   return (
     <div className="panel">
@@ -454,7 +464,7 @@ export default function LeadsTable({
         </div>
       ) : null}
 
-      {canDelete && selectedIds.length ? (
+      {(canDelete || canSend) && selectedIds.length ? (
         <div className="bulk-bar" role="region" aria-label="Bulk actions">
           <div className="bulk-bar-count">
             <strong>{selectedIds.length}</strong>
@@ -462,6 +472,18 @@ export default function LeadsTable({
           </div>
           <div className="bulk-bar-groups">
             <div className="bulk-group">
+              {!allFilteredSelected ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary bulk-btn"
+                  onClick={selectAllFiltered}
+                  disabled={bulkBusy}
+                >
+                  Select all {filtered.length}
+                </button>
+              ) : (
+                <span>All matching leads selected</span>
+              )}
               <button
                 type="button"
                 className="btn btn-secondary bulk-btn"
@@ -473,6 +495,17 @@ export default function LeadsTable({
             </div>
             <div className="bulk-divider" aria-hidden />
             <div className="bulk-group bulk-group-end">
+              {canSend ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary bulk-btn"
+                  onClick={() => onSendEmail?.(selectedIds)}
+                  disabled={bulkBusy}
+                >
+                  Send email
+                </button>
+              ) : null}
+              {canDelete ? (
               <button
                 type="button"
                 className="btn btn-primary bulk-btn"
@@ -481,6 +514,7 @@ export default function LeadsTable({
               >
                 {bulkBusy ? "Deleting…" : "Delete selected"}
               </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -490,7 +524,7 @@ export default function LeadsTable({
         <table>
           <thead>
             <tr>
-              {canDelete ? (
+              {canSelect ? (
                 <th className="col-check">
                   <input
                     type="checkbox"
@@ -572,7 +606,7 @@ export default function LeadsTable({
                     }
                   }}
                 >
-                  {canDelete ? (
+                  {canSelect ? (
                     <td
                       className="col-check"
                       onClick={(e) => e.stopPropagation()}
@@ -650,6 +684,20 @@ export default function LeadsTable({
                       </svg>
                     </button>
                     ) : null}
+                    {canSend ? (
+                    <button
+                      type="button"
+                      className="edit"
+                      title={l.email?.includes("@") ? "Send email" : "No email on this lead"}
+                      disabled={!l.email?.includes("@")}
+                      onClick={() => onSendEmail?.([l.id])}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <path d="M4 6h16v12H4z" strokeLinejoin="round" />
+                        <path d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    ) : null}
                     {canDelete ? (
                     <button type="button" className="delete" title="Delete" onClick={() => onDelete(l.id)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -676,10 +724,30 @@ export default function LeadsTable({
             onChange={(e) => setPageSize(Number(e.target.value))}
             aria-label="Rows per page"
           >
-            <option value={5}>5 / page</option>
-            <option value={10}>10 / page</option>
             <option value={25}>25 / page</option>
+            <option value={50}>50 / page</option>
+            <option value={100}>100 / page</option>
           </select>
+          {canSelect && filtered.length ? (
+            <button
+              type="button"
+              className="page-btn"
+              onClick={allFilteredSelected ? clearSelection : selectAllFiltered}
+            >
+              {allFilteredSelected
+                ? "Clear selection"
+                : `Select all ${filtered.length}`}
+            </button>
+          ) : null}
+          {canSend && filtered.length ? (
+            <button
+              type="button"
+              className="page-btn"
+              onClick={() => onSendEmail?.(filtered.map((lead) => lead.id))}
+            >
+              Email all
+            </button>
+          ) : null}
         </div>
         <div className="pages">
           <button

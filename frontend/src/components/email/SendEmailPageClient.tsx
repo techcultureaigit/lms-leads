@@ -5,6 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import { api, ApiError } from "@/lib/api";
+import { takeQueuedLeadEmail } from "@/lib/leadEmail";
 
 type TemplateRow = { id: string; name: string; subject: string; isActive: boolean };
 type StudentRow = {
@@ -12,6 +13,12 @@ type StudentRow = {
   name: string;
   email: string;
   role: string;
+};
+type LeadMailRow = {
+  id: string;
+  name: string;
+  email: string;
+  company?: string;
 };
 type BatchStatus = {
   id: string;
@@ -25,10 +32,14 @@ type BatchStatus = {
 export default function SendEmailPageClient() {
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [templateId, setTemplateId] = useState("");
-  const [tab, setTab] = useState<"students" | "csv" | "manual">("students");
+  const [tab, setTab] = useState<"students" | "leads" | "csv" | "manual">("students");
   const [students, setStudents] = useState<StudentRow[]>([]);
+  const [leadRows, setLeadRows] = useState<LeadMailRow[]>([]);
   const [search, setSearch] = useState("");
+  const [leadSearch, setLeadSearch] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
+  const [pickedLeads, setPickedLeads] = useState<string[]>([]);
+  const [pickAllLeads, setPickAllLeads] = useState(false);
   const [manual, setManual] = useState("");
   const [csvText, setCsvText] = useState("");
   const [error, setError] = useState("");
@@ -54,6 +65,34 @@ export default function SendEmailPageClient() {
   }, [search]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const audience = new URLSearchParams(window.location.search).get("audience");
+    if (audience !== "leads") return;
+    setTab("leads");
+    const queued = takeQueuedLeadEmail();
+    if (queued === "all") setPickAllLeads(true);
+    else if (queued?.length) setPickedLeads(queued);
+  }, []);
+
+  useEffect(() => {
+    if (tab !== "leads") return;
+    const timer = setTimeout(() => {
+      api<{ items: LeadMailRow[] }>(
+        `/api/email-templates/leads/list?search=${encodeURIComponent(leadSearch)}`,
+      )
+        .then((res) => setLeadRows(res.items))
+        .catch(() => setLeadRows([]));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [leadSearch, tab]);
+
+  useEffect(() => {
+    if (!pickAllLeads || !leadRows.length) return;
+    setPickedLeads(leadRows.map((lead) => lead.id));
+    setPickAllLeads(false);
+  }, [pickAllLeads, leadRows]);
+
+  useEffect(() => {
     if (!jobId) return;
     let stop = false;
     const tick = async () => {
@@ -73,6 +112,8 @@ export default function SendEmailPageClient() {
   }, [jobId]);
 
   const allChecked = students.length > 0 && students.every((student) => picked.includes(student.id));
+  const allLeadsChecked =
+    leadRows.length > 0 && leadRows.every((lead) => pickedLeads.includes(lead.id));
 
   const summary = useMemo(() => progress, [progress]);
 
@@ -89,6 +130,13 @@ export default function SendEmailPageClient() {
         const res = await api<{ jobId: string }>("/api/email-templates/send", {
           method: "POST",
           body: { templateId, studentIds: picked },
+        });
+        setJobId(res.jobId);
+      } else if (tab === "leads") {
+        if (!pickedLeads.length) throw new Error("Select at least one lead.");
+        const res = await api<{ jobId: string }>("/api/email-templates/send-leads", {
+          method: "POST",
+          body: { templateId, leadIds: pickedLeads },
         });
         setJobId(res.jobId);
       } else {
@@ -141,6 +189,7 @@ export default function SendEmailPageClient() {
 
         <div className="email-tabs">
           <button type="button" className={tab === "students" ? "active" : ""} onClick={() => setTab("students")}>All users</button>
+          <button type="button" className={tab === "leads" ? "active" : ""} onClick={() => setTab("leads")}>Leads</button>
           <button type="button" className={tab === "csv" ? "active" : ""} onClick={() => setTab("csv")}>CSV upload</button>
           <button type="button" className={tab === "manual" ? "active" : ""} onClick={() => setTab("manual")}>Manual entry</button>
         </div>
@@ -180,6 +229,48 @@ export default function SendEmailPageClient() {
                 {!students.length ? <p>No users with an email address.</p> : null}
               </div>
               <p>{picked.length} selected</p>
+            </div>
+          </div>
+        ) : null}
+
+        {tab === "leads" ? (
+          <div className="settings-panel">
+            <div className="settings-body">
+              <p className="hint">Mail goes to the email saved on each lead. Leads without an email are skipped.</p>
+              <div className="email-student-tools">
+                <input className="input" value={leadSearch} onChange={(e) => setLeadSearch(e.target.value)} placeholder="Search leads..." />
+                <button
+                  type="button"
+                  className="btn btn-secondary dash-cta"
+                  onClick={() =>
+                    setPickedLeads(allLeadsChecked ? [] : leadRows.map((lead) => lead.id))
+                  }
+                >
+                  {allLeadsChecked ? "Clear" : "Select all"}
+                </button>
+              </div>
+              <div className="email-student-list">
+                {leadRows.map((lead) => (
+                  <label key={lead.id}>
+                    <input
+                      type="checkbox"
+                      checked={pickedLeads.includes(lead.id)}
+                      onChange={(e) => {
+                        setPickedLeads((prev) =>
+                          e.target.checked ? [...prev, lead.id] : prev.filter((id) => id !== lead.id),
+                        );
+                      }}
+                    />
+                    <span>
+                      <strong>{lead.name || lead.company || lead.email}</strong>
+                      {lead.company ? <em className="email-user-role">{lead.company}</em> : null}
+                      <small>{lead.email}</small>
+                    </span>
+                  </label>
+                ))}
+                {!leadRows.length ? <p>No leads with an email address.</p> : null}
+              </div>
+              <p>{pickedLeads.length} selected</p>
             </div>
           </div>
         ) : null}

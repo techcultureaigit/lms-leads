@@ -9,7 +9,9 @@ import { asyncHandler } from "../middleware/errorHandler.js";
 import { renderDesign } from "../services/emailRender.js";
 import {
   findEmailUsersByIds,
+  findStudentsByIds,
   listEmailUsers,
+  listStudents,
   studentFromEmail,
 } from "../services/emailStudents.js";
 import { kickBatch } from "../services/emailQueue.js";
@@ -226,6 +228,11 @@ export const listStudentRecipients = asyncHandler(async (req, res) => {
   res.json({ items });
 });
 
+export const listLeadRecipients = asyncHandler(async (req, res) => {
+  const items = await listStudents(req.user, req.query.search);
+  res.json({ items });
+});
+
 function parseEmails(value) {
   const raw = Array.isArray(value) ? value.join(",") : String(value || "");
   const found = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
@@ -290,6 +297,17 @@ export const sendToStudents = asyncHandler(async (req, res) => {
   if (!template) return res.status(404).json({ message: "Template not found" });
   const students = await findEmailUsersByIds(studentIds);
   const batch = await startSend({ req, template, students, mode: "students" });
+  res.status(202).json({ jobId: String(batch._id), batch: toBatchSummary(batch) });
+});
+
+export const sendToLeads = asyncHandler(async (req, res) => {
+  const { templateId, leadIds, all } = req.body || {};
+  const template = await EmailTemplate.findById(templateId);
+  if (!template) return res.status(404).json({ message: "Template not found" });
+  const students = all
+    ? await listStudents(req.user, "")
+    : await findStudentsByIds(req.user, leadIds);
+  const batch = await startSend({ req, template, students, mode: "leads" });
   res.status(202).json({ jobId: String(batch._id), batch: toBatchSummary(batch) });
 });
 

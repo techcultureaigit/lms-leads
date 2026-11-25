@@ -18,21 +18,6 @@ export type EmailBlock = {
   props: Record<string, string>;
 };
 
-export const EMAIL_VARIABLES = [
-  "name",
-  "email",
-  "studentId",
-  "mobile",
-  "courseName",
-  "batch",
-  "enrollmentDate",
-  "instructor",
-  "company",
-  "role",
-  "date",
-  "year",
-] as const;
-
 export const BLOCK_PALETTE: { type: EmailBlockType; label: string }[] = [
   { type: "header", label: "Header" },
   { type: "footer", label: "Footer" },
@@ -51,14 +36,14 @@ export const BLOCK_PALETTE: { type: EmailBlockType; label: string }[] = [
 export function newBlock(type: EmailBlockType): EmailBlock {
   const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const defaults: Record<EmailBlockType, Record<string, string>> = {
-    header: { text: "Hello {{name}}" },
-    footer: { text: "{{company}} · {{year}}" },
-    columns: { left: "Course: {{courseName}}", right: "Batch: {{batch}}" },
-    button: { text: "View course", href: "#" },
+    header: { text: "Hello" },
+    footer: { text: "TechCulture" },
+    columns: { left: "Left column", right: "Right column" },
+    button: { text: "View details", href: "#" },
     divider: {},
-    heading: { text: "Welcome {{name}}" },
+    heading: { text: "Heading" },
     paragraph: {
-      text: "Hi {{name}}, your enrollment for {{courseName}} starts on {{enrollmentDate}}.",
+      text: "Write your email content here.",
     },
     image: { src: "", alt: "Image" },
     logo: { src: "", alt: "Logo" },
@@ -108,9 +93,33 @@ function blockHtml(block: EmailBlock) {
   }
 }
 
+export function blockInnerHtml(block: EmailBlock) {
+  return blockHtml(block);
+}
+
 export function renderEmailHtml(blocks: EmailBlock[]) {
   const rows = blocks.map(blockHtml).join("");
   return `<!DOCTYPE html><html><body style="margin:0;background:#f1f5f9;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#fff;border-radius:12px;overflow:hidden;">${rows}</table></td></tr></table></body></html>`;
+}
+
+export function emailBodyHtml(html: string) {
+  const match = String(html || "").match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  return (match ? match[1] : String(html || "")).trim();
+}
+
+export function wrapEmailDocument(body: string) {
+  const source = String(body || "").trim();
+  if (/<html[\s>]/i.test(source)) return source;
+  return `<!DOCTYPE html><html><body style="margin:0;background:#f1f5f9;">${source}</body></html>`;
+}
+
+export function htmlToPlainText(html: string) {
+  return String(html || "")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function renderEmailText(blocks: EmailBlock[]) {

@@ -10,6 +10,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import { useLeads } from "@/context/LeadsContext";
 import { useAuth } from "@/context/AuthContext";
 import { hasPermission } from "@/lib/permissions";
+import { queueLeadEmail } from "@/lib/leadEmail";
 import { formatDate, statusClass } from "@/lib/format";
 import { isTelephone } from "@/lib/mobile";
 import type { Lead } from "@/types/lead";
@@ -19,6 +20,7 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
   const { fetchLead, getActivities, loadActivities, addNote } = useLeads();
   const { user } = useAuth();
   const canEdit = hasPermission(user?.permissions, "leads.edit");
+  const canSend = hasPermission(user?.permissions, "email.send");
   const [lead, setLead] = useState<Lead | null>(null);
   const [ready, setReady] = useState(false);
   const activities = getActivities(leadId);
@@ -69,6 +71,18 @@ export default function ViewLeadPageClient({ leadId }: { leadId: string }) {
               <Link href="/leads" className="btn btn-secondary dash-cta">
                 Back to List
               </Link>
+              {canSend && lead.email.includes("@") ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary dash-cta"
+                  onClick={() => {
+                    queueLeadEmail([lead.id]);
+                    router.push("/email/send?audience=leads");
+                  }}
+                >
+                  Send email
+                </button>
+              ) : null}
               {canEdit ? (
               <Link
                 href={`/leads/${lead.id}/edit`}

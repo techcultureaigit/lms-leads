@@ -6955,9 +6955,29 @@ textarea,
 .email-page .email-meta,
 .email-meta {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr);
+  gap: 14px 16px;
   margin-bottom: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  align-items: end;
+}
+
+.email-meta-wide {
+  grid-column: 1 / -1;
+}
+
+.email-meta select,
+.email-meta .input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  background: #fff;
+  color: var(--text);
 }
 
 .email-meta label,
@@ -7003,10 +7023,11 @@ textarea,
 }
 
 .email-studio {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 14px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
 .email-canvas {
@@ -7015,11 +7036,13 @@ textarea,
   border-radius: 14px;
   min-height: 420px;
   padding: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 .email-canvas.is-mobile {
-  max-width: 420px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 .email-drop {
@@ -7077,17 +7100,108 @@ textarea,
 
 .email-palette-grid,
 .email-vars {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .email-preview {
   width: 100%;
-  min-height: 480px;
+  min-height: 640px;
   border: 0;
   background: #f8fafc;
+}
+
+.email-view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.email-view-frame {
+  background: #eef2f6;
+  padding: 18px;
+}
+
+.email-view-frame.is-mobile {
+  display: flex;
+  justify-content: center;
+}
+
+.email-view-frame.is-mobile .email-preview {
+  width: 390px;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.email-format-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.email-format-bar button,
+.email-var-chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+
+.email-var-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.email-var-chip {
+  height: auto;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.email-visual {
+  width: 100%;
+  min-height: 640px;
+  background: #eef2f6;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  outline: none;
+  overflow: auto;
+}
+
+.email-visual table {
+  max-width: 100% !important;
+}
+
+.email-visual img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.email-visual:focus {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.email-canvas.is-mobile .email-visual {
+  width: min(390px, 100%);
+  margin: 0 auto;
+  background: #fff;
 }
 
 .email-block-editor {
@@ -7125,6 +7239,64 @@ textarea,
   font-weight: 500;
   line-height: 1.5;
   white-space: pre;
+}
+
+.email-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.email-split.is-preview-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.email-source-wrap,
+.email-preview-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.email-page textarea.email-source {
+  min-height: 720px;
+  height: 720px;
+  margin: 0;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px;
+  resize: vertical;
+}
+
+.email-preview-pane {
+  background: #eef2f6;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.email-preview-pane .email-preview {
+  height: 680px;
+  min-height: 680px;
+  background: #fff;
+  border-radius: 10px;
+}
+
+.email-preview-pane.is-mobile {
+  align-items: center;
+}
+
+.email-preview-pane.is-mobile .email-preview {
+  width: 390px;
+  max-width: 100%;
 }
 
 .email-block-editor-head,
@@ -7221,6 +7393,7 @@ textarea,
 @media (max-width: 900px) {
   .email-meta,
   .email-studio,
+  .email-split,
   .email-progress,
   .email-view-meta {
     grid-template-columns: 1fr;
