@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
+import Toast from "@/components/shared/Toast";
 import { api, ApiError } from "@/lib/api";
 import { takeQueuedLeadEmail } from "@/lib/leadEmail";
 
@@ -40,6 +41,7 @@ export default function SendEmailPageClient() {
   const [picked, setPicked] = useState<string[]>([]);
   const [pickedLeads, setPickedLeads] = useState<string[]>([]);
   const [pickAllLeads, setPickAllLeads] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [manual, setManual] = useState("");
   const [csvText, setCsvText] = useState("");
   const [error, setError] = useState("");
@@ -117,6 +119,11 @@ export default function SendEmailPageClient() {
 
   const summary = useMemo(() => progress, [progress]);
 
+  const successText = (count: number, noun: "user" | "lead") => {
+    const label = noun === "lead" ? "lead" : "user";
+    return `Email bhejna shuru ho gaya · ${count} ${label}${count === 1 ? "" : "s"} ❤`;
+  };
+
   const send = async () => {
     if (!templateId) {
       setError("Select an email template.");
@@ -132,6 +139,7 @@ export default function SendEmailPageClient() {
           body: { templateId, studentIds: picked },
         });
         setJobId(res.jobId);
+        setToast(successText(picked.length, "user"));
       } else if (tab === "leads") {
         if (!pickedLeads.length) throw new Error("Select at least one lead.");
         const res = await api<{ jobId: string }>("/api/email-templates/send-leads", {
@@ -139,6 +147,7 @@ export default function SendEmailPageClient() {
           body: { templateId, leadIds: pickedLeads },
         });
         setJobId(res.jobId);
+        setToast(successText(pickedLeads.length, "lead"));
       } else {
         const emails = tab === "csv" ? csvText : manual;
         if (!emails.trim()) throw new Error("Add at least one email address.");
@@ -147,6 +156,7 @@ export default function SendEmailPageClient() {
           body: { templateId, emails, mode: tab },
         });
         setJobId(res.jobId);
+        setToast("Email bhejna shuru ho gaya ❤");
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Send failed");
@@ -170,6 +180,7 @@ export default function SendEmailPageClient() {
           }
         />
         {error ? <div className="cal-flash err">{error}</div> : null}
+        {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
 
         <div className="settings-panel email-send-card">
           <div className="settings-body">
