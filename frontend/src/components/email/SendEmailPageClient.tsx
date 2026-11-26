@@ -121,7 +121,7 @@ export default function SendEmailPageClient() {
 
   const successText = (count: number, noun: "user" | "lead") => {
     const label = noun === "lead" ? "lead" : "user";
-    return `Email bhejna shuru ho gaya · ${count} ${label}${count === 1 ? "" : "s"} ❤`;
+    return `Email sent successfully · ${count} ${label}${count === 1 ? "" : "s"}`;
   };
 
   const send = async () => {
@@ -156,7 +156,7 @@ export default function SendEmailPageClient() {
           body: { templateId, emails, mode: tab },
         });
         setJobId(res.jobId);
-        setToast("Email bhejna shuru ho gaya ❤");
+        setToast("Email sent successfully");
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Send failed");
