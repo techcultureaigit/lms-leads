@@ -33,9 +33,12 @@ import { prepareEmailImage } from "@/lib/prepareEmailImage";
 
 const CATEGORIES = ["general", "welcome", "follow-up", "report", "announcement"];
 
+// Header mirrors the footer: navy band, same logo (white TECH / orange CULTURE) and padding.
+const HEADER_LOGO_URL = "https://res.cloudinary.com/cqjexiif/image/upload/e_make_transparent:20/f_png/v1795597539/techlogo.webp";
+
 const FIXED_HEADER_HTML = `<tr>
-            <td style="padding:24px 32px;background:#ffffff;border-bottom:1px solid #edf0f4;">
-              <img src="https://res.cloudinary.com/cqjexiif/image/upload/v1795594241/tc-new-logo-2.png" width="205" alt="TechCulture" style="width:205px;max-width:70%;height:auto;display:block;border:0;">
+            <td style="padding:26px 32px;background:#172544;border-bottom:1px solid #2b3c60;">
+              <img src="${HEADER_LOGO_URL}" width="180" alt="TechCulture" style="width:180px;max-width:70%;height:auto;display:block;border:0;">
             </td>
           </tr>`;
 
@@ -678,12 +681,12 @@ export default function FixedLayoutEmailEditor() {
               style={{ maxWidth: view === "mobile" ? 390 : 700 }}
             >
               {/* Fixed Header */}
-              <div className="px-8 py-6 bg-white border-b border-slate-100 select-none">
+              <div className="px-8 py-6 bg-[#172544] border-b border-[#2b3c60] select-none">
                 <img
-                  src="https://res.cloudinary.com/cqjexiif/image/upload/v1795594241/tc-new-logo-2.png"
-                  width={205}
+                  src={HEADER_LOGO_URL}
+                  width={180}
                   alt="TechCulture"
-                  style={{ width: 205, maxWidth: "70%", height: "auto", display: "block" }}
+                  style={{ width: 180, maxWidth: "70%", height: "auto", display: "block" }}
                 />
               </div>
 
