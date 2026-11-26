@@ -1,5 +1,5 @@
-import EmailTemplateEditor from "@/components/email/EmailTemplateEditor";
+import FixedLayoutEmailEditor from "@/components/email/FixedLayoutEmailEditor";
 
 export default function CreateEmailTemplatePage() {
-  return <EmailTemplateEditor />;
+  return <FixedLayoutEmailEditor />;
 }

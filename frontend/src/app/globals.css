@@ -1,3 +1,7 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 :root {
   /* Light sky workspace — no green */
   --primary: #3b82f6;
@@ -31,45 +35,94 @@
   --font-display: var(--font-bricolage), var(--font-outfit), sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    background:
+      radial-gradient(900px 420px at 90% -8%, rgba(245, 158, 11, 0.1), transparent 55%),
+      radial-gradient(1100px 520px at -8% 0%, var(--bg-glow), transparent 58%),
+      linear-gradient(180deg, #fbfcfe 0%, #f3f6fb 55%, #eef2f8 100%);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* Tailwind preflight defaults scoped to the standalone drag-and-drop email editor */
+  .email-editor-host *,
+  .email-editor-host ::before,
+  .email-editor-host ::after {
+    border-width: 0;
+    border-style: solid;
+    border-color: #e2e8f0;
+  }
+
+  .email-editor-host button,
+  .email-editor-host [type="button"],
+  .email-editor-host [type="submit"],
+  .email-editor-host [type="reset"] {
+    background-color: transparent;
+    background-image: none;
+  }
+
+  .email-editor-host textarea {
+    height: auto;
+    padding: 0;
+  }
+
+  .email-editor-host table {
+    width: auto;
+    font-size: inherit;
+  }
+
+  .email-editor-host th,
+  .email-editor-host td {
+    padding: 0;
+    border-bottom: 0;
+    text-align: inherit;
+    white-space: normal;
+    background: transparent;
+    color: inherit;
+    font-weight: inherit;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    position: static;
+  }
 }
 
-html {
-  height: 100%;
-}
-
-body {
-  min-height: 100%;
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.45;
-  background:
-    radial-gradient(900px 420px at 90% -8%, rgba(245, 158, 11, 0.1), transparent 55%),
-    radial-gradient(1100px 520px at -8% 0%, var(--bg-glow), transparent 58%),
-    linear-gradient(180deg, #fbfcfe 0%, #f3f6fb 55%, #eef2f8 100%);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  cursor: pointer;
+.content.email-editor-host {
+  padding: 12px 16px 16px;
+  max-width: none;
 }
 
 .app-shell {
@@ -1217,7 +1270,14 @@ textarea.input {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-textarea,
+@layer base {
+  textarea {
+    height: 92px;
+    padding: 10px 12px;
+    resize: vertical;
+  }
+}
+
 .field textarea,
 textarea.input {
   height: 92px;
@@ -1781,10 +1841,31 @@ textarea.input:focus {
   -webkit-overflow-scrolling: touch;
 }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 12.5px;
+@layer base {
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12.5px;
+  }
+
+  th,
+  td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e8eef5;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f3f7fb;
+    color: #506279;
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+  }
 }
 
 .leads-page table,
@@ -1792,25 +1873,6 @@ table {
 .dash-page .table-wrap table,
 .report-page .table-wrap table {
   min-width: 980px;
-}
-
-th,
-td {
-  padding: 12px 10px;
-  border-bottom: 1px solid #e8eef5;
-  text-align: left;
-  white-space: nowrap;
-}
-
-th {
-  background: #f3f7fb;
-  color: #506279;
-  font-weight: 700;
-  font-size: 11.5px;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  position: sticky;
-  top: 0;
 }
 
 tbody tr {
@@ -6956,12 +7018,13 @@ textarea,
 .email-meta {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.5fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr);
-  gap: 14px 16px;
-  margin-bottom: 14px;
+  gap: 16px 18px;
+  margin-top: 16px;
+  margin-bottom: 20px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 20px 22px;
   align-items: end;
 }
 

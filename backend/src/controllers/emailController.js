@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import multer from "multer";
+import { v2 as cloudinary } from "cloudinary";
 import { EmailTemplate } from "../models/EmailTemplate.js";
 import { EmailBatch } from "../models/EmailBatch.js";
 import { EmailHistory } from "../models/EmailHistory.js";
@@ -31,9 +32,9 @@ const storage = multer.diskStorage({
   },
 });
 
-export const emailImageUpload = multer({
+const emailImageUpload = multer({
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.mimetype || "")) {
       cb(new Error("Only image files are allowed"));
@@ -42,6 +43,17 @@ export const emailImageUpload = multer({
     cb(null, true);
   },
 });
+
+// Wraps multer so size/type errors return a clear 4xx JSON message instead of a 500.
+export const singleEmailImageUpload = (req, res, next) => {
+  emailImageUpload.single("image")(req, res, (err) => {
+    if (!err) return next();
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({ message: "Image is too large. Maximum size is 10MB." });
+    }
+    return res.status(400).json({ message: err.message || "Image upload failed" });
+  });
+};
 
 const EMAIL_KEYS = ALL_PERMISSIONS.filter((key) => key.startsWith("email."));
 
@@ -202,6 +214,33 @@ export const deleteTemplate = asyncHandler(async (req, res) => {
 
 export const uploadImage = asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "Image file is required" });
+
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (cloudName && apiKey && apiSecret) {
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+    try {
+      const uploaded = await cloudinary.uploader.upload(req.file.path, {
+        folder: process.env.CLOUDINARY_FOLDER || "lms-email-templates",
+        resource_type: "image",
+      });
+      return res.status(201).json({
+        url: uploaded.secure_url,
+        path: uploaded.secure_url,
+        publicId: uploaded.public_id,
+        filename: req.file.filename,
+      });
+    } finally {
+      fs.unlink(req.file.path, () => {});
+    }
+  }
+
   const origin = process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || 5000}`;
   const filePath = `/api/email-templates/images/${req.file.filename}`;
   res.status(201).json({

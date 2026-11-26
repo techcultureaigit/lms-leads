@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   createTemplate,
   deleteTemplate,
-  emailImageUpload,
+  singleEmailImageUpload,
   getBatch,
   getImage,
   getTemplate,
@@ -41,7 +41,7 @@ router.get(
 router.post(
   "/upload-image",
   requirePermission("email.create"),
-  emailImageUpload.single("image"),
+  singleEmailImageUpload,
   uploadImage,
 );
 router.post("/send", requirePermission("email.send"), sendToStudents);
