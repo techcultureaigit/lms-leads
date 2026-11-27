@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, Eye, RotateCcw, Search } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import Topbar from "@/components/layout/Topbar";
 import PageHeader from "@/components/shared/PageHeader";
 import Toast from "@/components/shared/Toast";
+import SendTemplatePreviewModal from "@/components/email/SendTemplatePreviewModal";
 import { api, ApiError } from "@/lib/api";
 import { takeQueuedLeadEmail } from "@/lib/leadEmail";
 
-type TemplateRow = { id: string; name: string; subject: string; isActive: boolean };
+type TemplateRow = {
+  id: string;
+  name: string;
+  subject: string;
+  category?: string;
+  isActive: boolean;
+  html?: string;
+};
 type StudentRow = {
   id: string;
   name: string;
@@ -33,6 +42,14 @@ type BatchStatus = {
 export default function SendEmailPageClient() {
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [templateId, setTemplateId] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [loadedHtml, setLoadedHtml] = useState("");
+  const [customSubject, setCustomSubject] = useState<string | null>(null);
+  const [customBody, setCustomBody] = useState<string | null>(null);
   const [tab, setTab] = useState<"students" | "leads" | "csv" | "manual">("students");
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [leadRows, setLeadRows] = useState<LeadMailRow[]>([]);
@@ -117,6 +134,67 @@ export default function SendEmailPageClient() {
   const allLeadsChecked =
     leadRows.length > 0 && leadRows.every((lead) => pickedLeads.includes(lead.id));
 
+  const selectedTemplate = useMemo(
+    () => templates.find((t) => t.id === templateId) || null,
+    [templates, templateId],
+  );
+
+  const filteredTemplates = useMemo(() => {
+    const q = templateSearch.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.subject.toLowerCase().includes(q) ||
+        (t.category || "").toLowerCase().includes(q),
+    );
+  }, [templates, templateSearch]);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [dropdownOpen]);
+
+  const openTemplatePreview = async (id: string) => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    try {
+      const res = await api<{ template?: TemplateRow; item?: TemplateRow }>(
+        `/api/email-templates/${id}`,
+      );
+      const tpl = res.template || res.item;
+      setLoadedHtml(tpl?.html || "");
+    } catch {
+      setLoadedHtml("");
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleSelectTemplate = (tpl: TemplateRow) => {
+    setTemplateId(tpl.id);
+    setDropdownOpen(false);
+    setTemplateSearch("");
+    setCustomSubject(null);
+    setCustomBody(null);
+    void openTemplatePreview(tpl.id);
+  };
+
+  const isCustomized = customSubject !== null || customBody !== null;
+
   const summary = useMemo(() => progress, [progress]);
 
   const successText = (count: number, noun: "user" | "lead") => {
@@ -131,12 +209,16 @@ export default function SendEmailPageClient() {
     }
     setSending(true);
     setError("");
+    const overrides = {
+      ...(customSubject !== null ? { customSubject } : {}),
+      ...(customBody !== null ? { customBody } : {}),
+    };
     try {
       if (tab === "students") {
         if (!picked.length) throw new Error("Select at least one user.");
         const res = await api<{ jobId: string }>("/api/email-templates/send", {
           method: "POST",
-          body: { templateId, studentIds: picked },
+          body: { templateId, studentIds: picked, ...overrides },
         });
         setJobId(res.jobId);
         setToast(successText(picked.length, "user"));
@@ -144,7 +226,7 @@ export default function SendEmailPageClient() {
         if (!pickedLeads.length) throw new Error("Select at least one lead.");
         const res = await api<{ jobId: string }>("/api/email-templates/send-leads", {
           method: "POST",
-          body: { templateId, leadIds: pickedLeads },
+          body: { templateId, leadIds: pickedLeads, ...overrides },
         });
         setJobId(res.jobId);
         setToast(successText(pickedLeads.length, "lead"));
@@ -153,7 +235,7 @@ export default function SendEmailPageClient() {
         if (!emails.trim()) throw new Error("Add at least one email address.");
         const res = await api<{ jobId: string }>("/api/email-templates/send-external", {
           method: "POST",
-          body: { templateId, emails, mode: tab },
+          body: { templateId, emails, mode: tab, ...overrides },
         });
         setJobId(res.jobId);
         setToast("Email sent successfully");
@@ -182,21 +264,142 @@ export default function SendEmailPageClient() {
         {error ? <div className="cal-flash err">{error}</div> : null}
         {toast ? <Toast message={toast} onClose={() => setToast(null)} /> : null}
 
-        <div className="settings-panel email-send-card">
-          <div className="settings-body">
-            <label>
-              Select email template <span className="required">*</span>
-              <select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                <option value="">Select template…</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name} — {template.subject}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <div className="settings-panel email-send-card" style={{ overflow: "visible" }}>
+          <div className="settings-body" style={{ overflow: "visible" }}>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-slate-800">
+                  Select email template <span className="text-red-500">*</span>
+                </span>
+                {selectedTemplate ? (
+                  <div className="flex items-center gap-2">
+                    {isCustomized ? (
+                      <>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                          Edited for this send
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomSubject(null);
+                            setCustomBody(null);
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800"
+                        >
+                          <RotateCcw size={12} /> Reset
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (loadedHtml) setPreviewOpen(true);
+                        else void openTemplatePreview(selectedTemplate.id);
+                      }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                      <Eye size={14} /> Preview &amp; Edit
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-left transition hover:border-blue-400 focus:border-blue-500 focus:outline-none"
+                >
+                  {selectedTemplate ? (
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-900">
+                        {selectedTemplate.name}
+                      </div>
+                      <div className="truncate text-xs text-slate-500">
+                        {customSubject ?? selectedTemplate.subject}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400">Select template…</span>
+                  )}
+                  <ChevronDown
+                    size={16}
+                    className={`shrink-0 text-slate-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {dropdownOpen ? (
+                  <div className="absolute left-0 right-0 top-full z-40 mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2">
+                      <Search size={14} className="shrink-0 text-slate-400" />
+                      <input
+                        type="text"
+                        autoFocus
+                        value={templateSearch}
+                        onChange={(e) => setTemplateSearch(e.target.value)}
+                        placeholder="Search templates by name or subject..."
+                        className="w-full border-0 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                      />
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                      {filteredTemplates.length ? (
+                        filteredTemplates.map((tpl) => {
+                          const active = tpl.id === templateId;
+                          return (
+                            <button
+                              key={tpl.id}
+                              type="button"
+                              onClick={() => handleSelectTemplate(tpl)}
+                              className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition ${
+                                active ? "bg-blue-50" : "hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`truncate text-sm font-semibold ${active ? "text-blue-700" : "text-slate-900"}`}>
+                                    {tpl.name}
+                                  </span>
+                                  {tpl.category ? (
+                                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                      {tpl.category}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="mt-0.5 truncate text-xs text-slate-500">
+                                  {tpl.subject}
+                                </div>
+                              </div>
+                              {active ? <Check size={16} className="shrink-0 text-blue-600" /> : null}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-6 text-center text-sm text-slate-400">
+                          No matching templates found.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
+
+        {previewOpen && selectedTemplate ? (
+          <SendTemplatePreviewModal
+            templateName={selectedTemplate.name}
+            initialSubject={customSubject ?? selectedTemplate.subject}
+            initialHtml={customBody ?? loadedHtml}
+            loading={previewLoading}
+            onClose={() => setPreviewOpen(false)}
+            onApply={({ subject, html }) => {
+              setCustomSubject(subject !== selectedTemplate.subject ? subject : null);
+              setCustomBody(html !== loadedHtml ? html : null);
+              setPreviewOpen(false);
+            }}
+          />
+        ) : null}
 
         <div className="email-tabs">
           <button type="button" className={tab === "students" ? "active" : ""} onClick={() => setTab("students")}>All users</button>

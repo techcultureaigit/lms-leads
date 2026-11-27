@@ -10,17 +10,33 @@ export function leadToStudent(lead) {
     created && !Number.isNaN(created.getTime())
       ? created.toISOString().slice(0, 10)
       : "";
+  const contactName = String(lead.contact || lead.entity || "").trim();
+  const firstName = contactName.split(/\s+/)[0] || "";
+  const products = Array.isArray(lead.products) ? lead.products.join(", ") : "";
+  const idStr = String(lead._id);
   return {
-    id: String(lead._id),
-    name: lead.contact || lead.entity || "",
-    email: String(lead.email || "").trim(),
-    studentId: String(lead._id),
-    mobile: lead.mobile || "",
-    courseName: Array.isArray(lead.products) ? lead.products.join(", ") : "",
-    batch: lead.leadSource || "",
-    enrollmentDate,
-    instructor: lead.assigned || lead.owner || "",
+    id: idStr,
+    leadId: `LD-${idStr.slice(-6).toUpperCase()}`,
+    name: contactName,
+    firstName,
+    contact: contactName,
+    entity: lead.entity || "",
     company: lead.entity || "",
+    email: String(lead.email || "").trim(),
+    studentId: idStr,
+    mobile: lead.mobile || "",
+    location: lead.location || "",
+    website: lead.website || "",
+    products,
+    courseName: products,
+    status: lead.status || "",
+    leadSource: lead.leadSource || "",
+    batch: lead.leadSource || "",
+    owner: lead.owner || "",
+    assigned: lead.assigned || lead.owner || "",
+    instructor: lead.assigned || lead.owner || "",
+    followup: lead.followup || "",
+    enrollmentDate,
   };
 }
 

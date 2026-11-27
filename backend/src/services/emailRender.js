@@ -53,21 +53,51 @@ export function renderDesign(design) {
 
 export function applyPlaceholders(input, student) {
   const now = new Date();
+  const fullName = String(student?.contact || student?.name || "").trim();
+  const firstName = student?.firstName || fullName.split(/\s+/)[0] || "";
+  const idStr = String(student?.id || student?.studentId || "");
+  const leadId = student?.leadId || (idStr ? `LD-${idStr.slice(-6).toUpperCase()}` : "");
+  const company = student?.entity || student?.company || "";
+  const products = student?.products || student?.courseName || "";
+  const leadSource = student?.leadSource || student?.batch || "";
+  const owner = student?.owner || student?.assigned || student?.instructor || "";
+
   const map = {
-    name: student?.name || "",
+    // Lead variables (case-insensitive via lowercase keys)
+    lead_id: leadId,
+    leadid: leadId,
+    first_name: firstName,
+    firstname: firstName,
+    contact_name: fullName,
+    contact: fullName,
+    name: fullName,
+    company_name: company,
+    company: company,
+    entity: company,
     email: student?.email || "",
-    studentId: student?.studentId || "",
     mobile: student?.mobile || "",
-    courseName: student?.courseName || "",
-    batch: student?.batch || "",
-    enrollmentDate: student?.enrollmentDate || "",
-    instructor: student?.instructor || "",
-    company: student?.company || "",
+    phone: student?.mobile || "",
+    location: student?.location || "",
+    website: student?.website || "",
+    products,
+    interested_service: products,
+    coursename: products,
+    status: student?.status || "",
+    lead_source: leadSource,
+    source: leadSource,
+    batch: leadSource,
+    owner,
+    assigned: student?.assigned || owner,
+    instructor: owner,
+    followup: student?.followup || "",
+    studentid: idStr,
+    enrollmentdate: student?.enrollmentDate || "",
     role: student?.role || "",
     date: now.toLocaleDateString("en-IN"),
     year: String(now.getFullYear()),
   };
-  return String(input || "").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) =>
-    Object.prototype.hasOwnProperty.call(map, key) ? map[key] : "",
-  );
+  return String(input || "").replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => {
+    const normalized = String(key).toLowerCase();
+    return Object.prototype.hasOwnProperty.call(map, normalized) ? map[normalized] : "";
+  });
 }

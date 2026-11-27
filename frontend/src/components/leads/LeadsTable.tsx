@@ -200,7 +200,9 @@ export default function LeadsTable({
     sortDir,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const effectivePageSize =
+    pageSize === 0 ? Math.max(1, filtered.length) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / effectivePageSize));
 
   useEffect(() => {
     setPage(1);
@@ -211,9 +213,9 @@ export default function LeadsTable({
   }, [page, totalPages]);
 
   const pageRows = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page, pageSize]);
+    const start = (page - 1) * effectivePageSize;
+    return filtered.slice(start, start + effectivePageSize);
+  }, [filtered, page, effectivePageSize]);
 
   useEffect(() => {
     const visible = new Set(filtered.map((lead) => lead.id));
@@ -281,8 +283,8 @@ export default function LeadsTable({
   const sortMark = (key: SortKey) =>
     sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "";
 
-  const start = filtered.length ? (page - 1) * pageSize + 1 : 0;
-  const end = Math.min(page * pageSize, filtered.length);
+  const start = filtered.length ? (page - 1) * effectivePageSize + 1 : 0;
+  const end = Math.min(page * effectivePageSize, filtered.length);
   const colCount = canSelect ? 14 : 13;
 
   return (
@@ -538,7 +540,7 @@ export default function LeadsTable({
                   />
                 </th>
               ) : null}
-              <th>S.No</th>
+              <th>Lead ID</th>
               <th>
                 <button type="button" className="th-sort" onClick={() => toggleSort("entity")}>
                   Entity{sortMark("entity")}
@@ -592,7 +594,7 @@ export default function LeadsTable({
                 </td>
               </tr>
             ) : (
-              pageRows.map((l, i) => (
+              pageRows.map((l) => (
                 <tr
                   key={l.id}
                   className={`leads-click-row${selectedIds.includes(l.id) ? " row-selected" : ""}`}
@@ -621,7 +623,9 @@ export default function LeadsTable({
                       />
                     </td>
                   ) : null}
-                  <td>{start + i}</td>
+                  <td title={l.id} style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 12, fontWeight: 600, color: "#475569" }}>
+                    LD-{String(l.id || "").slice(-6).toUpperCase()}
+                  </td>
                   <td>{l.entity}</td>
                   <td>{l.contact}</td>
                   <td>
@@ -727,6 +731,9 @@ export default function LeadsTable({
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
             <option value={100}>100 / page</option>
+            <option value={200}>200 / page</option>
+            <option value={500}>500 / page</option>
+            <option value={0}>All</option>
           </select>
           {canSelect && filtered.length ? (
             <button
